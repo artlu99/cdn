@@ -14,6 +14,7 @@
 		"nanoid": "^5.1.5"
 	},
 	"devDependencies": {
+		"@iconify-json/ph": "^1.2.2",
 		"@unocss/preset-attributify": "^66.1.2",
 		"@unocss/preset-icons": "^66.1.2",
 		"@unocss/preset-typography": "^66.1.2",

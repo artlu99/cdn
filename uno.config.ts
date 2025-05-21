@@ -3,15 +3,11 @@ import {
 	presetAttributify,
 	presetIcons,
 	presetTypography,
-	presetUno,
-	presetWind,
 	transformerDirectives,
 } from "unocss";
 
 export default defineConfig({
 	presets: [
-		presetUno(),
-		presetWind(),
 		presetAttributify(),
 		presetIcons({
 			scale: 1.2,
