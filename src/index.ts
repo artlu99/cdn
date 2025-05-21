@@ -1,11 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { html } from "hono/html";
 import LandingPage from "./landing";
 
 interface Env {
-	MY_DURABLE_OBJECT: DurableObjectNamespace<DurableObjectStub>;
+	MY_DURABLE_OBJECT: DurableObjectNamespace;
 	IMAGES: {
 		info(stream: ReadableStream<Uint8Array>): Promise<{
 			format: string;
@@ -54,16 +53,6 @@ interface ListResponse {
 	total: number;
 	page: number;
 	perPage: number;
-}
-
-interface DurableObjectStub {
-	listImages(page?: number, perPage?: number): Promise<ListResponse>;
-	retrieveImage(
-		hash: string,
-	): Promise<{ buffer: Uint8Array; mimeType: string } | null>;
-	getCacheDuration(): Promise<number>;
-	storeImage(buffer: ArrayBuffer, mimeType: string): Promise<string>;
-	deleteImage(hash: string): Promise<void>;
 }
 
 /** A Durable Object's behavior is defined in an exported Javascript class */
@@ -281,14 +270,14 @@ app
 		}
 
 		const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
-		const stub = c.env.MY_DURABLE_OBJECT.get(id);
+		const stub = c.env.MY_DURABLE_OBJECT.get(id) as unknown as MyDurableObject;
 		const result = await stub.listImages(page, perPage);
 		return c.json(result);
 	})
 	.get("/image/:hash", async (c) => {
 		const hash = c.req.param("hash");
 		const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
-		const stub = c.env.MY_DURABLE_OBJECT.get(id);
+		const stub = c.env.MY_DURABLE_OBJECT.get(id) as unknown as MyDurableObject;
 
 		const result = await stub.retrieveImage(hash);
 		if (!result) {
@@ -319,7 +308,9 @@ app
 			}
 
 			const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
-			const stub = c.env.MY_DURABLE_OBJECT.get(id);
+			const stub = c.env.MY_DURABLE_OBJECT.get(
+				id,
+			) as unknown as MyDurableObject;
 
 			// Decode base64
 			const base64Data = json.image.replace(/^data:image\/\w+;base64,/, "");
@@ -339,7 +330,7 @@ app
 	.delete("/image/:hash", async (c) => {
 		const hash = c.req.param("hash");
 		const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
-		const stub = c.env.MY_DURABLE_OBJECT.get(id);
+		const stub = c.env.MY_DURABLE_OBJECT.get(id) as unknown as MyDurableObject;
 
 		await stub.deleteImage(hash);
 		return c.text("Image deleted", 200);

@@ -2,17 +2,18 @@
 	"name": "cdn",
 	"version": "0.0.0",
 	"private": true,
+	"description": "simple image CDN on Cloudflare Durable Objects",
+	"main": "src/index.ts",
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"types": "wrangler types"
 	},
-	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
-		"typescript": "^5.5.2",
-		"wrangler": "^4.16.0"
-	},
 	"dependencies": {
-		"hono": "^4.7.10"
+		"hono": "^3.12.0"
+	},
+	"devDependencies": {
+		"typescript": "^5.3.3",
+		"wrangler": "^3.22.1"
 	}
 }

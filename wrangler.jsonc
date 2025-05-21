@@ -20,5 +20,8 @@
 				"name": "MY_DURABLE_OBJECT"
 			}
 		]
+	},
+	"images": {
+		"binding": "IMAGES"
 	}
 }

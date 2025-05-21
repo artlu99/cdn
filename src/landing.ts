@@ -309,20 +309,20 @@ export default function LandingPage() {
 
 				<script>
 					document.addEventListener('DOMContentLoaded', () => {
-						const fileInput = document.getElementById('fileInput') as HTMLInputElement;
-						const cameraInput = document.getElementById('cameraInput') as HTMLInputElement;
-						const uploadButton = document.getElementById('uploadButton') as HTMLButtonElement;
-						const uploadForm = document.getElementById('uploadForm') as HTMLFormElement;
-						const imageGrid = document.getElementById('imageGrid') as HTMLDivElement;
-						const previewContainer = document.getElementById('previewContainer') as HTMLDivElement;
-						const previewImage = document.getElementById('previewImage') as HTMLImageElement;
-						const fileOption = document.getElementById('fileOption') as HTMLLabelElement;
-						const cameraOption = document.getElementById('cameraOption') as HTMLLabelElement;
+						const fileInput = document.getElementById('fileInput');
+						const cameraInput = document.getElementById('cameraInput');
+						const uploadButton = document.getElementById('uploadButton');
+						const uploadForm = document.getElementById('uploadForm');
+						const imageGrid = document.getElementById('imageGrid');
+						const previewContainer = document.getElementById('previewContainer');
+						const previewImage = document.getElementById('previewImage');
+						const fileOption = document.getElementById('fileOption');
+						const cameraOption = document.getElementById('cameraOption');
 
-						let currentFile: File | null = null;
+						let currentFile = null;
 
 						// Handle file selection
-						async function handleFileSelect(file: File) {
+						async function handleFileSelect(file) {
 							if (!file) return;
 							currentFile = file;
 
@@ -337,5 +337,37 @@ export default function LandingPage() {
 							if (!webFormats.includes(file.type)) {
 								const conversionInfo = document.createElement('p');
 								conversionInfo.className = 'conversion-info';
-								conversionInfo.textContent = `;
+								conversionInfo.textContent = 'This image will be converted to a web-friendly format';
+								previewContainer.appendChild(conversionInfo);
+							}
+						}
+
+						// Read file as base64
+						function readFileAsBase64(file) {
+							return new Promise((resolve, reject) => {
+								const reader = new FileReader();
+								reader.onload = () => resolve(reader.result);
+								reader.onerror = reject;
+								reader.readAsDataURL(file);
+							});
+						}
+
+						// Format file size
+						function formatFileSize(bytes) {
+							if (bytes === 0) return '0 Bytes';
+							const k = 1024;
+							const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+							const i = Math.floor(Math.log(bytes) / Math.log(k));
+							return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+						}
+
+						// Format date
+						function formatDate(timestamp) {
+							return new Date(timestamp).toLocaleDateString();
+						}
+					});
+				</script>
+			</body>
+		</html>
+	`;
 }
