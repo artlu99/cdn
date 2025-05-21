@@ -46,18 +46,31 @@
 </head>
 
 <body class="bg-base-200 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-6xl" x-data="{ images: [], loading: true }" x-init="
-					fetch('/image')
-						.then(response => response.json())
-						.then(data => {
-							images = data.images || [];
-							loading = false;
-						})
-						.catch(error => {
-							console.error('Error loading images:', error);
-							loading = false;
-						})
-				">
+    <div class="container mx-auto px-4 py-8 max-w-6xl" x-data="{ 
+        images: [], 
+        loading: true,
+        init() {
+            this.$watch('images', (value) => {
+                console.log('Images array updated:', value);
+            });
+            
+            fetch('/image')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Initial image list data:', data);
+                    this.images = data.hashes.map(item => ({
+                        hash: item.hash,
+                        size: item.size,
+                        uploadedAt: item.uploadedAt
+                    }));
+                    this.loading = false;
+                })
+                .catch(error => {
+                    console.error('Error loading images:', error);
+                    this.loading = false;
+                });
+        }
+    }">
         <header class="text-center mb-12">
             <h1 class="text-4xl font-bold text-primary mb-4">Image CDN</h1>
             <p class="text-base-content/70">Upload and manage your images</p>
@@ -142,10 +155,15 @@
                 class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 <template x-for="image in images" :key="image.hash">
                     <div class="card bg-base-200 hover:-translate-y-1 transition-transform">
-                        <figure class="aspect-square">
+                        <figure class="aspect-square relative group">
                             <img :src="'/image/' + image.hash"
                                 :alt="'Image uploaded on ' + new Date(image.uploadedAt).toLocaleDateString()"
                                 class="w-full h-full object-cover" />
+                            <button @click="document.getElementById('deleteModal').showModal()"
+                                class="absolute top-2 right-2 btn btn-circle btn-sm btn-error opacity-0 group-hover:opacity-100 transition-opacity"
+                                :data-hash="image.hash">
+                                <i class="ph ph-trash"></i>
+                            </button>
                         </figure>
                         <div class="card-body p-4">
                             <p class="text-sm truncate"
@@ -157,6 +175,24 @@
             </div>
         </section>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <dialog id="deleteModal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Delete Image</h3>
+            <p class="py-4">Are you sure you want to delete this image? This action cannot be undone.</p>
+            <div class="modal-action">
+                <button class="btn btn-ghost" onclick="document.getElementById('deleteModal').close()">Cancel</button>
+                <button class="btn btn-error" id="confirmDelete">
+                    <i class="ph ph-trash mr-2"></i>
+                    Delete
+                </button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
 
     <script>
         // Handle file input changes to show preview
@@ -191,6 +227,8 @@
         document.body.addEventListener('htmx:afterRequest', function (evt) {
             if (evt.detail.target.id === 'previewContainer') {
                 if (evt.detail.successful) {
+                    console.log('Upload successful, response:', evt.detail.xhr.response);
+
                     // Hide preview container
                     document.getElementById('previewContainer').classList.add('hidden');
 
@@ -203,16 +241,32 @@
                         backgroundColor: "#22c55e",
                     }).showToast();
 
-                    // Refresh the image list
+                    // Refresh the image list using Alpine.js
                     const container = document.querySelector('[x-data]');
                     const alpineData = Alpine.$data(container);
+
+                    // Set loading state
+                    alpineData.loading = true;
+
+                    console.log('Fetching updated image list...');
                     fetch('/image')
-                        .then(response => response.json())
+                        .then(response => {
+                            console.log('Image list response status:', response.status);
+                            return response.json();
+                        })
                         .then(data => {
-                            alpineData.images = data.images || [];
+                            console.log('Image list data:', data);
+                            // Map the hashes array to the expected format and update Alpine data
+                            alpineData.images = data.hashes.map(item => ({
+                                hash: item.hash,
+                                size: item.size,
+                                uploadedAt: item.uploadedAt
+                            }));
+                            alpineData.loading = false;
                         })
                         .catch(error => {
                             console.error('Error refreshing images:', error);
+                            alpineData.loading = false;
                             Toastify({
                                 text: "Error refreshing image list",
                                 duration: 3000,
@@ -222,6 +276,7 @@
                             }).showToast();
                         });
                 } else {
+                    console.error('Upload failed:', evt.detail.xhr.response);
                     // Show error toast
                     const errorMessage = evt.detail.xhr.responseText || 'Upload failed';
                     Toastify({
@@ -233,6 +288,72 @@
                     }).showToast();
                 }
             }
+        });
+
+        // Handle image deletion
+        document.getElementById('confirmDelete').addEventListener('click', function () {
+            const modal = document.getElementById('deleteModal');
+            const deleteButton = document.querySelector('[data-hash]');
+            const hash = deleteButton.getAttribute('data-hash');
+
+            console.log('Deleting image:', hash);
+            fetch(`/image/${hash}`, {
+                method: 'DELETE'
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to delete image');
+                    }
+                    return response.text();
+                })
+                .then(() => {
+                    // Close the modal
+                    modal.close();
+
+                    // Show success toast
+                    Toastify({
+                        text: "Image deleted successfully",
+                        duration: 3000,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#22c55e",
+                    }).showToast();
+
+                    // Update Alpine.js data directly
+                    const container = document.querySelector('[x-data]');
+                    const alpineData = Alpine.$data(container);
+
+                    // Remove the deleted image from the array
+                    alpineData.images = alpineData.images.filter(img => img.hash !== hash);
+
+                    // Refresh the total count
+                    fetch('/image')
+                        .then(response => response.json())
+                        .then(data => {
+                            // Only update the total count, keep the filtered images array
+                            alpineData.total = data.total;
+                        })
+                        .catch(error => {
+                            console.error('Error refreshing total count:', error);
+                            Toastify({
+                                text: "Error refreshing image count",
+                                duration: 3000,
+                                gravity: "top",
+                                position: "right",
+                                backgroundColor: "#ef4444",
+                            }).showToast();
+                        });
+                })
+                .catch(error => {
+                    console.error('Error deleting image:', error);
+                    Toastify({
+                        text: "Error deleting image",
+                        duration: 3000,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#ef4444",
+                    }).showToast();
+                });
         });
     </script>
 </body>
