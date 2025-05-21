@@ -153,25 +153,48 @@
             </div>
             <div x-show="!loading && images.length > 0"
                 class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                <template x-for="image in images" :key="image.hash">
-                    <div class="card bg-base-200 hover:-translate-y-1 transition-transform">
-                        <figure class="aspect-square relative group">
-                            <img :src="'/image/' + image.hash"
-                                :alt="'Image uploaded on ' + new Date(image.uploadedAt).toLocaleDateString()"
-                                class="w-full h-full object-cover" />
-                            <button @click="document.getElementById('deleteModal').showModal()"
-                                class="absolute top-2 right-2 btn btn-circle btn-sm btn-error opacity-0 group-hover:opacity-100 transition-opacity"
-                                :data-hash="image.hash">
-                                <i class="ph ph-trash"></i>
-                            </button>
-                        </figure>
-                        <div class="card-body p-4">
-                            <p class="text-sm truncate"
-                                x-text="'Image uploaded on ' + new Date(image.uploadedAt).toLocaleDateString()"></p>
-                            <p class="text-xs text-base-content/70" x-text="image.size + ' bytes'"></p>
+                <div class="card bg-base-200 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title">
+                            <i class="ph ph-clock"></i>
+                            Recent Uploads
+                        </h2>
+                        <div class="overflow-x-auto">
+                            <ul class="menu bg-base-100 rounded-box">
+                                <template x-for="image in images" :key="image.hash">
+                                    <li>
+                                        <div class="flex items-center gap-4 p-2">
+                                            <!-- Thumbnail -->
+                                            <div class="w-16 h-16 flex-shrink-0">
+                                                <img :src="'/i/' + image.hash" :alt="'Image ' + image.hash"
+                                                    class="w-full h-full object-cover rounded-lg" loading="lazy" />
+                                            </div>
+                                            <!-- Image Info -->
+                                            <div class="flex-grow min-w-0">
+                                                <div class="text-sm font-mono truncate" x-text="image.hash"></div>
+                                                <div class="text-xs opacity-70 truncate" x-text="'/i/' + image.hash">
+                                                </div>
+                                                <div class="text-xs opacity-50"
+                                                    x-text="new Date(image.uploadedAt).toLocaleString()"></div>
+                                            </div>
+                                            <!-- Actions -->
+                                            <div class="flex-shrink-0 flex gap-2">
+                                                <button class="btn btn-ghost btn-sm"
+                                                    @click="copyToClipboard('/i/' + image.hash)">
+                                                    <i class="ph ph-copy"></i>
+                                                </button>
+                                                <button class="btn btn-ghost btn-sm text-error"
+                                                    @click="deleteImage(image.hash)">
+                                                    <i class="ph ph-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </template>
+                            </ul>
                         </div>
                     </div>
-                </template>
+                </div>
             </div>
         </section>
     </div>
