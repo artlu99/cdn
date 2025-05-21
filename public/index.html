@@ -223,30 +223,30 @@
                         </h2>
                         <div class="overflow-x-auto">
                             <ul class="menu bg-base-100 rounded-box">
-                                <template x-for="image in images" :key="image.hash">
+                                <template x-for="image in images" :key="image.id">
                                     <li>
                                         <div class="flex items-center gap-4 p-2">
                                             <!-- Thumbnail -->
                                             <div class="w-16 h-16 flex-shrink-0">
-                                                <img :src="'/image/' + image.hash" :alt="'Image ' + image.hash"
+                                                <img :src="'/image/' + image.id" :alt="'Image ' + image.id"
                                                     class="w-full h-full object-cover rounded-lg" loading="lazy" />
                                             </div>
                                             <!-- Image Info -->
                                             <div class="flex-grow min-w-0">
-                                                <div class="text-sm font-mono truncate" x-text="image.hash"></div>
-                                                <div class="text-xs opacity-70 truncate"
-                                                    x-text="'/image/' + image.hash"></div>
+                                                <div class="text-sm font-mono truncate" x-text="image.id"></div>
+                                                <div class="text-xs opacity-70 truncate" x-text="'/image/' + image.id">
+                                                </div>
                                                 <div class="text-xs opacity-50"
                                                     x-text="new Date(image.uploadedAt).toLocaleString()"></div>
                                             </div>
                                             <!-- Actions -->
                                             <div class="flex-shrink-0 flex gap-2">
                                                 <button class="btn btn-ghost btn-sm"
-                                                    @click="copyToClipboard('/image/' + image.hash)">
+                                                    @click="copyToClipboard('/image/' + image.id)">
                                                     <i class="ph ph-copy"></i>
                                                 </button>
                                                 <button class="btn btn-ghost btn-sm text-error"
-                                                    @click="deleteImage(image.hash)">
+                                                    @click="deleteImage(image.id)">
                                                     <i class="ph ph-trash"></i>
                                                 </button>
                                             </div>
@@ -289,7 +289,7 @@
                         .then(response => response.json())
                         .then(data => {
                             this.images = data.images.map(item => ({
-                                hash: item.hash,
+                                id: item.id,
                                 size: item.size,
                                 uploadedAt: item.uploadedAt
                             }));
@@ -300,9 +300,9 @@
                             this.loading = false;
                         });
                 },
-                async deleteImage(hash) {
+                async deleteImage(id) {
                     try {
-                        const response = await fetch(`/image/${hash}`, {
+                        const response = await fetch(`/image/${id}`, {
                             method: 'DELETE'
                         });
 
@@ -328,7 +328,7 @@
 
                         // Update the entire images array
                         this.images = data.images.map(item => ({
-                            hash: item.hash,
+                            id: item.id,
                             size: item.size,
                             uploadedAt: item.uploadedAt
                         }));
@@ -381,6 +381,8 @@
                             position: "right",
                             backgroundColor: "#ef4444",
                         }).showToast();
+                        // Clear the input
+                        this.value = '';
                         return;
                     }
 
@@ -401,6 +403,10 @@
                 if (evt.detail.successful) {
                     // Hide preview container
                     document.getElementById('previewContainer').classList.add('hidden');
+                    // Clear file inputs
+                    document.querySelectorAll('#fileInput, #cameraInput').forEach(input => {
+                        input.value = '';
+                    });
 
                     // Show success toast
                     Toastify({
@@ -424,7 +430,7 @@
                         .then(data => {
                             // Update the entire images array
                             alpineData.images = data.images.map(item => ({
-                                hash: item.hash,
+                                id: item.id,
                                 size: item.size,
                                 uploadedAt: item.uploadedAt
                             }));
@@ -462,14 +468,14 @@
         // Handle image deletion
         document.getElementById('confirmDelete').addEventListener('click', function () {
             const modal = document.getElementById('deleteModal');
-            const deleteButton = document.querySelector('[data-hash]');
-            const hash = deleteButton.getAttribute('data-hash');
+            const deleteButton = document.querySelector('[data-id]');
+            const id = deleteButton.getAttribute('data-id');
 
             // Get the Alpine component
             const container = document.querySelector('[x-data]');
             const alpineData = Alpine.$data(container);
 
-            fetch(`/image/${hash}`, {
+            fetch(`/image/${id}`, {
                 method: 'DELETE'
             })
                 .then(response => {
@@ -500,7 +506,7 @@
                         .then(data => {
                             // Update the entire images array
                             alpineData.images = data.images.map(item => ({
-                                hash: item.hash,
+                                id: item.id,
                                 size: item.size,
                                 uploadedAt: item.uploadedAt
                             }));
