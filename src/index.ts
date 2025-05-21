@@ -1,7 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import LandingPage from "./landing";
 
 interface Env {
 	MY_DURABLE_OBJECT: DurableObjectNamespace;
@@ -24,22 +23,29 @@ interface Env {
 	};
 }
 
-// Add type declarations
-declare function createImageBitmap(image: Blob): Promise<ImageBitmap>;
-interface ImageBitmap {
-	width: number;
-	height: number;
-	close(): void;
-}
-
-interface ImageMetadata {
-	size: number;
+export interface ImageMetadata {
+	hash: string;
+	mimeType: string;
 	uploadedAt: number;
-	format: string;
-	originalFormat?: string;
+	width?: number;
+	height?: number;
+	format?: string;
+	size: number;
 }
 
-interface ImageRequest {
+export interface ImageListResponse {
+	images: ImageMetadata[];
+	total: number;
+	page: number;
+	perPage: number;
+}
+
+export interface ImageResponse {
+	buffer: ArrayBuffer;
+	mimeType: string;
+}
+
+export interface ImageRequest {
 	image: string;
 	mimeType: string;
 }
@@ -53,6 +59,18 @@ interface ListResponse {
 	total: number;
 	page: number;
 	perPage: number;
+}
+
+export interface DurableObjectStub {
+	getImageMetadata(hash: string): Promise<ImageMetadata | null>;
+	getCacheDuration(): Promise<number>;
+}
+
+export interface MyDurableObject extends DurableObjectStub {
+	listImages(page: number, perPage: number): Promise<ImageListResponse>;
+	retrieveImage(hash: string): Promise<ImageResponse | null>;
+	storeImage(buffer: ArrayBuffer, mimeType: string): Promise<string>;
+	deleteImage(hash: string): Promise<void>;
 }
 
 /** A Durable Object's behavior is defined in an exported Javascript class */
@@ -250,8 +268,87 @@ export class MyDurableObject extends DurableObject {
 }
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Add CORS middleware
+app.use("*", cors());
+
+// Helper function to generate meta tags for images
+function generateImageMetaTags(hash: string, metadata: ImageMetadata) {
+	const baseUrl = "https://cdn.artlu.workers.dev";
+	const imageUrl = `${baseUrl}/i/${hash}`;
+	const uploadDate = new Date(metadata.uploadedAt).toLocaleDateString();
+
+	return [
+		// Basic meta tags
+		`<title>Image uploaded on ${uploadDate}</title>`,
+		`<meta name="description" content="View image uploaded on ${uploadDate}" />`,
+
+		// Open Graph tags
+		`<meta property="og:title" content="Image uploaded on ${uploadDate}" />`,
+		`<meta property="og:type" content="article" />`,
+		`<meta property="og:url" content="${imageUrl}" />`,
+		`<meta property="og:description" content="View image uploaded on ${uploadDate}" />`,
+		`<meta property="og:site_name" content="Image CDN" />`,
+		`<meta property="og:image" content="${imageUrl}" />`,
+		`<meta property="og:image:width" content="${metadata.width || 1200}" />`,
+		`<meta property="og:image:height" content="${metadata.height || 630}" />`,
+		`<meta property="og:image:alt" content="Image uploaded on ${uploadDate}" />`,
+
+		// Twitter Card tags
+		`<meta name="twitter:card" content="summary_large_image" />`,
+		`<meta name="twitter:title" content="Image uploaded on ${uploadDate}" />`,
+		`<meta name="twitter:description" content="View image uploaded on ${uploadDate}" />`,
+		`<meta name="twitter:image" content="${imageUrl}" />`,
+
+		// Additional meta tags for better sharing
+		`<meta property="og:image:type" content="${metadata.format || "image/jpeg"}" />`,
+		`<meta property="og:image:secure_url" content="${imageUrl}" />`,
+		`<meta name="twitter:image:alt" content="Image uploaded on ${uploadDate}" />`,
+	].join("\n");
+}
+
+// Add meta tags endpoint for images
+app.get("/meta/:hash", async (c) => {
+	const hash = c.req.param("hash");
+	const id = c.env.MY_DURABLE_OBJECT.idFromName(hash);
+	const obj = c.env.MY_DURABLE_OBJECT.get(id);
+
+	try {
+		const metadata = await (
+			obj as unknown as DurableObjectStub
+		).getImageMetadata(hash);
+		if (!metadata) {
+			return c.notFound();
+		}
+
+		const metaTags = generateImageMetaTags(hash, metadata);
+
+		// Set cache headers
+		const cacheDuration = await (
+			obj as unknown as DurableObjectStub
+		).getCacheDuration();
+		c.header("Cache-Control", `public, max-age=${cacheDuration}`);
+		c.header("Content-Type", "text/html");
+
+		return c.html(`
+			<!DOCTYPE html>
+			<html>
+				<head>
+					${metaTags}
+				</head>
+				<body>
+					<script>
+						window.location.href = "/i/${hash}";
+					</script>
+				</body>
+			</html>
+		`);
+	} catch (error) {
+		return c.notFound();
+	}
+});
+
 app
-	.use("*", cors())
 	.get("/image", async (c) => {
 		const page = Number.parseInt(c.req.query("page") ?? "1");
 		const perPage = Number.parseInt(c.req.query("perPage") ?? "10");
@@ -267,56 +364,66 @@ app
 		}
 
 		const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
-		const stub = c.env.MY_DURABLE_OBJECT.get(id) as unknown as MyDurableObject;
-		const result = await stub.listImages(page, perPage);
+		const stub = c.env.MY_DURABLE_OBJECT.get(id);
+		const result = await (stub as unknown as MyDurableObject).listImages(
+			page,
+			perPage,
+		);
 		return c.json(result);
 	})
 	.get("/image/:hash", async (c) => {
 		const hash = c.req.param("hash");
 		const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
-		const stub = c.env.MY_DURABLE_OBJECT.get(id) as unknown as MyDurableObject;
+		const stub = c.env.MY_DURABLE_OBJECT.get(id);
 
-		const result = await stub.retrieveImage(hash);
+		const result = await (stub as unknown as MyDurableObject).retrieveImage(
+			hash,
+		);
 		if (!result) {
 			return c.text("Image not found", 404);
 		}
 
-		const cacheDuration = await stub.getCacheDuration();
+		const cacheDuration = await (
+			stub as unknown as MyDurableObject
+		).getCacheDuration();
 		return new Response(result.buffer, {
 			headers: {
-				"Content-Type": result.mimeType,
+				"Content-Type": result.mimeType ?? "image/jpeg",
 				"Cache-Control": `public, max-age=${cacheDuration}`,
 			},
 		});
 	})
-	.put("/image", async (c) => {
+	.post("/upload", async (c) => {
 		try {
-			const json = (await c.req.json()) as ImageRequest;
-			if (
-				!json.image ||
-				typeof json.image !== "string" ||
-				!json.mimeType ||
-				typeof json.mimeType !== "string"
-			) {
-				return c.text(
-					"Invalid request: image field must be a base64 string and mimeType must be specified",
-					400,
-				);
+			const formData = await c.req.formData();
+			const file = formData.get("image") as File;
+
+			if (!file) {
+				return c.text("No file provided", 400);
 			}
 
+			// Validate file type
+			if (!file.type.startsWith("image/")) {
+				return c.text("Invalid file type. Only images are allowed.", 400);
+			}
+
+			// Convert File to ArrayBuffer
+			const buffer = await file.arrayBuffer();
+
 			const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
-			const stub = c.env.MY_DURABLE_OBJECT.get(
-				id,
-			) as unknown as MyDurableObject;
+			const stub = c.env.MY_DURABLE_OBJECT.get(id);
 
-			// Decode base64
-			const base64Data = json.image.replace(/^data:image\/\w+;base64,/, "");
-			const imageBuffer = Uint8Array.from(atob(base64Data), (c) =>
-				c.charCodeAt(0),
-			).buffer;
+			const hash = await (stub as unknown as MyDurableObject).storeImage(
+				buffer,
+				file.type,
+			);
 
-			const hash = await stub.storeImage(imageBuffer, json.mimeType);
-			return c.json({ hash });
+			// Return success response with the hash
+			return c.json({
+				success: true,
+				hash,
+				message: "Image uploaded successfully",
+			});
 		} catch (error) {
 			if (error instanceof Error) {
 				return c.text(error.message, 400);
@@ -327,9 +434,9 @@ app
 	.delete("/image/:hash", async (c) => {
 		const hash = c.req.param("hash");
 		const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
-		const stub = c.env.MY_DURABLE_OBJECT.get(id) as unknown as MyDurableObject;
+		const stub = c.env.MY_DURABLE_OBJECT.get(id);
 
-		await stub.deleteImage(hash);
+		await (stub as unknown as MyDurableObject).deleteImage(hash);
 		return c.text("Image deleted", 200);
 	});
 

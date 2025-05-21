@@ -5,18 +5,52 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Image CDN</title>
+
+    <!-- Base OG tags -->
+    <meta property="og:title" content="Image CDN" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="" x-data x-init="$el.content = window.location.href" />
+    <meta property="og:description" content="Upload and manage your images" />
+    <meta property="og:site_name" content="Image CDN" />
+
+    <!-- Dynamic OG tags for images -->
+    <template x-if="images && images.length > 0">
+        <div>
+            <meta property="og:image" x-bind:content="images[0].url" />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta property="og:image:alt" x-bind:content="images[0].filename" />
+        </div>
+    </template>
+
+    <!-- Twitter Card tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Image CDN" />
+    <meta name="twitter:description" content="Upload and manage your images" />
+    <template x-if="images && images.length > 0">
+        <meta name="twitter:image" x-bind:content="images[0].url" />
+    </template>
+
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Toastify CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <!-- Toastify JS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
 <body class="bg-base-200 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-6xl" x-data="{ images: [], loading: true }" x-init="
-					fetch('/api/images')
+					fetch('/image')
 						.then(response => response.json())
 						.then(data => {
-							images = data;
+							images = data.images || [];
 							loading = false;
 						})
 						.catch(error => {
@@ -30,78 +64,177 @@
         </header>
 
         <section class="bg-base-100 p-8 rounded-box shadow-sm mb-8">
-            <div class="flex flex-col sm:flex-row gap-4 mb-4">
-                <label
-                    class="flex-1 flex flex-col items-center justify-center p-4 bg-base-200 border-2 border-base-300 rounded-lg cursor-pointer hover:border-primary transition-colors"
-                    id="fileOption">
-                    <input type="file" accept="image/*" id="fileInput" class="hidden" />
-                    <svg class="w-6 h-6 mb-2 fill-current" viewBox="0 0 24 24">
-                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                    </svg>
-                    <p class="text-sm">Choose File</p>
-                </label>
-                <label
-                    class="flex-1 flex flex-col items-center justify-center p-4 bg-base-200 border-2 border-base-300 rounded-lg cursor-pointer hover:border-primary transition-colors"
-                    id="cameraOption">
-                    <input type="file" accept="image/*" capture="environment" id="cameraInput" class="hidden" />
-                    <svg class="w-6 h-6 mb-2 fill-current" viewBox="0 0 24 24">
-                        <path
-                            d="M12 15c1.66 0 3-1.31 3-2.97V5.97C15 4.31 13.66 3 12 3S9 4.31 9 5.97v6.06C9 13.69 10.34 15 12 15zm-1-4c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm0-5c0-.55.45-1 1-1s1 .45 1 1v3c0 .55-.45 1-1 1s-1-.45-1-1V6z" />
-                    </svg>
-                    <p class="text-sm">Take Photo</p>
-                </label>
-            </div>
-            <div class="text-center text-sm text-base-content/70">
-                <p class="mb-2">Supported input formats:</p>
-                <ul class="flex flex-wrap justify-center gap-2 mb-2">
-                    <li>PNG</li>
-                    <li>JPEG</li>
-                    <li>HEIC</li>
-                    <li>WebP</li>
-                    <li>GIF</li>
-                    <li>BMP</li>
-                    <li>TIFF</li>
-                    <li>ICO</li>
-                </ul>
-                <p class="text-xs italic">Images will be converted to PNG, JPEG, or WebP for optimal web delivery</p>
-            </div>
+            <form hx-encoding="multipart/form-data" hx-post="/upload"
+                hx-trigger="change from:#fileInput, change from:#cameraInput" hx-target="#previewContainer"
+                hx-swap="innerHTML" hx-indicator="#uploadProgress" class="flex flex-col gap-4">
+                <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                    <label
+                        class="flex-1 flex flex-col items-center justify-center p-4 bg-base-200 border-2 border-base-300 rounded-lg cursor-pointer hover:border-primary transition-colors"
+                        id="fileOption">
+                        <input type="file" accept="image/*" id="fileInput" name="image" class="hidden" />
+                        <i class="ph ph-plus-circle text-2xl mb-2"></i>
+                        <p class="text-sm">Choose File</p>
+                    </label>
+                    <label
+                        class="flex-1 flex flex-col items-center justify-center p-4 bg-base-200 border-2 border-base-300 rounded-lg cursor-pointer hover:border-primary transition-colors"
+                        id="cameraOption">
+                        <input type="file" accept="image/*" capture="environment" id="cameraInput" name="image"
+                            class="hidden" />
+                        <i class="ph ph-camera text-2xl mb-2"></i>
+                        <p class="text-sm">Take Photo</p>
+                    </label>
+                </div>
+                <div class="text-center text-sm text-base-content/70">
+                    <p class="mb-2">Supported input formats:</p>
+                    <ul class="flex flex-wrap justify-center gap-2 mb-2">
+                        <li>PNG</li>
+                        <li>JPEG</li>
+                        <li>HEIC</li>
+                        <li>WebP</li>
+                        <li>GIF</li>
+                        <li>BMP</li>
+                        <li>TIFF</li>
+                        <li>ICO</li>
+                    </ul>
+                    <p class="text-xs italic">Images will be converted to PNG, JPEG, or WebP for optimal web delivery
+                    </p>
+                </div>
 
-            <div class="hidden mt-4 text-center" id="previewContainer">
-                <img id="previewImage" class="max-w-full max-h-[300px] rounded-lg mb-4" alt="Preview" />
-                <form class="flex gap-4 justify-center" id="uploadForm">
-                    <button type="submit" class="btn btn-primary" id="uploadButton">
-                        Upload
-                    </button>
-                </form>
-            </div>
+                <div id="previewContainer" class="hidden mt-4 text-center">
+                    <div class="flex flex-col items-center gap-4">
+                        <img id="previewImage" class="max-w-full max-h-[300px] rounded-lg" alt="Preview" />
+                        <div class="w-full max-w-md">
+                            <div id="uploadProgress" class="htmx-indicator">
+                                <div class="flex items-center gap-2">
+                                    <i class="ph ph-spinner text-xl animate-spin"></i>
+                                    <span>Uploading...</span>
+                                </div>
+                                <progress class="progress progress-primary w-full mt-2"></progress>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ph ph-upload mr-2"></i>
+                                Upload
+                            </button>
+                            <button type="button" class="btn btn-ghost"
+                                onclick="document.getElementById('previewContainer').classList.add('hidden')">
+                                <i class="ph ph-x mr-2"></i>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </section>
 
         <section class="bg-base-100 p-8 rounded-box shadow-sm">
             <h2 class="text-2xl font-semibold mb-6">Recent Uploads</h2>
             <div x-show="loading" class="text-center py-8 text-base-content/70">
-                <span class="loading loading-spinner loading-lg"></span>
+                <i class="ph ph-spinner text-4xl animate-spin"></i>
                 <p class="mt-4">Loading images...</p>
             </div>
             <div x-show="!loading && images.length === 0" class="text-center py-8 text-base-content/70">
-                No images uploaded yet
+                <i class="ph ph-image text-4xl mb-4"></i>
+                <p>No images uploaded yet</p>
             </div>
             <div x-show="!loading && images.length > 0"
                 class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                <template x-for="image in images" :key="image.id">
+                <template x-for="image in images" :key="image.hash">
                     <div class="card bg-base-200 hover:-translate-y-1 transition-transform">
                         <figure class="aspect-square">
-                            <img :src="image.url" :alt="image.filename" class="w-full h-full object-cover" />
+                            <img :src="'/image/' + image.hash"
+                                :alt="'Image uploaded on ' + new Date(image.uploadedAt).toLocaleDateString()"
+                                class="w-full h-full object-cover" />
                         </figure>
                         <div class="card-body p-4">
-                            <p class="text-sm truncate" x-text="image.filename"></p>
-                            <p class="text-xs text-base-content/70"
-                                x-text="new Date(image.uploadedAt).toLocaleDateString()"></p>
+                            <p class="text-sm truncate"
+                                x-text="'Image uploaded on ' + new Date(image.uploadedAt).toLocaleDateString()"></p>
+                            <p class="text-xs text-base-content/70" x-text="image.size + ' bytes'"></p>
                         </div>
                     </div>
                 </template>
             </div>
         </section>
     </div>
+
+    <script>
+        // Handle file input changes to show preview
+        document.querySelectorAll('#fileInput, #cameraInput').forEach(input => {
+            input.addEventListener('change', function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    // Validate file size (10MB limit)
+                    if (file.size > 10 * 1024 * 1024) {
+                        Toastify({
+                            text: "File size exceeds 10MB limit",
+                            duration: 3000,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#ef4444",
+                        }).showToast();
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const preview = document.getElementById('previewImage');
+                        preview.src = e.target.result;
+                        document.getElementById('previewContainer').classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+
+        // Handle successful upload
+        document.body.addEventListener('htmx:afterRequest', function (evt) {
+            if (evt.detail.target.id === 'previewContainer') {
+                if (evt.detail.successful) {
+                    // Hide preview container
+                    document.getElementById('previewContainer').classList.add('hidden');
+
+                    // Show success toast
+                    Toastify({
+                        text: "Image uploaded successfully!",
+                        duration: 3000,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#22c55e",
+                    }).showToast();
+
+                    // Refresh the image list
+                    const container = document.querySelector('[x-data]');
+                    const alpineData = Alpine.$data(container);
+                    fetch('/image')
+                        .then(response => response.json())
+                        .then(data => {
+                            alpineData.images = data.images || [];
+                        })
+                        .catch(error => {
+                            console.error('Error refreshing images:', error);
+                            Toastify({
+                                text: "Error refreshing image list",
+                                duration: 3000,
+                                gravity: "top",
+                                position: "right",
+                                backgroundColor: "#ef4444",
+                            }).showToast();
+                        });
+                } else {
+                    // Show error toast
+                    const errorMessage = evt.detail.xhr.responseText || 'Upload failed';
+                    Toastify({
+                        text: errorMessage,
+                        duration: 3000,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#ef4444",
+                    }).showToast();
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>
