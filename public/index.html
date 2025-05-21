@@ -46,31 +46,7 @@
 </head>
 
 <body class="bg-base-200 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-6xl" x-data="{ 
-        images: [], 
-        loading: true,
-        init() {
-            this.$watch('images', (value) => {
-                console.log('Images array updated:', value);
-            });
-            
-            fetch('/image')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Initial image list data:', data);
-                    this.images = data.hashes.map(item => ({
-                        hash: item.hash,
-                        size: item.size,
-                        uploadedAt: item.uploadedAt
-                    }));
-                    this.loading = false;
-                })
-                .catch(error => {
-                    console.error('Error loading images:', error);
-                    this.loading = false;
-                });
-        }
-    }">
+    <div class="container mx-auto px-4 py-8 max-w-6xl" x-data="imageList">
         <header class="text-center mb-12">
             <h1 class="text-4xl font-bold text-primary mb-4">Image CDN</h1>
             <p class="text-base-content/70">Upload and manage your images</p>
@@ -151,8 +127,7 @@
                 <i class="ph ph-image text-4xl mb-4"></i>
                 <p>No images uploaded yet</p>
             </div>
-            <div x-show="!loading && images.length > 0"
-                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div x-show="!loading && images.length > 0">
                 <div class="card bg-base-200 shadow-xl">
                     <div class="card-body">
                         <h2 class="card-title">
@@ -172,8 +147,8 @@
                                             <!-- Image Info -->
                                             <div class="flex-grow min-w-0">
                                                 <div class="text-sm font-mono truncate" x-text="image.hash"></div>
-                                                <div class="text-xs opacity-70 truncate" x-text="'/image/' + image.hash">
-                                                </div>
+                                                <div class="text-xs opacity-70 truncate"
+                                                    x-text="'/image/' + image.hash"></div>
                                                 <div class="text-xs opacity-50"
                                                     x-text="new Date(image.uploadedAt).toLocaleString()"></div>
                                             </div>
@@ -218,6 +193,98 @@
     </dialog>
 
     <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('imageList', () => ({
+                images: [],
+                loading: true,
+                init() {
+                    this.$watch('images', (value) => {
+                        console.log('Images array updated:', value);
+                    });
+
+                    fetch('/image')
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Initial image list data:', data);
+                            this.images = data.hashes.map(item => ({
+                                hash: item.hash,
+                                size: item.size,
+                                uploadedAt: item.uploadedAt
+                            }));
+                            this.loading = false;
+                        })
+                        .catch(error => {
+                            console.error('Error loading images:', error);
+                            this.loading = false;
+                        });
+                },
+                async deleteImage(hash) {
+                    try {
+                        const response = await fetch(`/image/${hash}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to delete image');
+                        }
+
+                        // Show success toast
+                        Toastify({
+                            text: "Image deleted successfully",
+                            duration: 3000,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#22c55e",
+                        }).showToast();
+
+                        // Set loading state
+                        this.loading = true;
+
+                        // Fetch updated list
+                        const listResponse = await fetch('/image');
+                        const data = await listResponse.json();
+
+                        // Update the entire images array
+                        this.images = data.hashes.map(item => ({
+                            hash: item.hash,
+                            size: item.size,
+                            uploadedAt: item.uploadedAt
+                        }));
+                        this.loading = false;
+                    } catch (error) {
+                        console.error('Error deleting image:', error);
+                        Toastify({
+                            text: "Error deleting image",
+                            duration: 3000,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#ef4444",
+                        }).showToast();
+                    }
+                },
+                copyToClipboard(text) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        Toastify({
+                            text: "URL copied to clipboard",
+                            duration: 2000,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#22c55e",
+                        }).showToast();
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                        Toastify({
+                            text: "Failed to copy URL",
+                            duration: 2000,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#ef4444",
+                        }).showToast();
+                    });
+                }
+            }));
+        });
+
         // Handle file input changes to show preview
         document.querySelectorAll('#fileInput, #cameraInput').forEach(input => {
             input.addEventListener('change', function (e) {
