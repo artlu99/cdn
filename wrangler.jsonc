@@ -9,6 +9,9 @@
 			"tag": "v1"
 		}
 	],
+	"vars": {
+		"BASE_URL": "https://cdn.artlu.workers.dev"
+	},
 	"assets": {
 		"binding": "ASSETS",
 		"directory": "./public"

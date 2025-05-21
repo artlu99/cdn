@@ -272,8 +272,8 @@ const app = new Hono<{ Bindings: Env }>();
 app.use("*", cors());
 
 // Helper function to generate meta tags for images
-function generateImageMetaTags(hash: string, metadata: ImageMetadata) {
-	const baseUrl = "https://cdn.artlu.workers.dev";
+function generateImageMetaTags(env: Env, hash: string, metadata: ImageMetadata) {
+	const baseUrl = env.BASE_URL;
 	const imageUrl = `${baseUrl}/image/${hash}`;
 	const uploadDate = new Date(metadata.uploadedAt).toLocaleDateString();
 
@@ -320,7 +320,7 @@ app.get("/meta/:hash", async (c) => {
 			return c.notFound();
 		}
 
-		const metaTags = generateImageMetaTags(hash, metadata);
+		const metaTags = generateImageMetaTags(c.env, hash, metadata);
 
 		// Set cache headers
 		const cacheDuration = await (

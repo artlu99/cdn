@@ -6,6 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Image CDN</title>
 
+    <!-- Critical CSS to prevent FOUC -->
+    <style>
+        /* Hide content until UnoCSS loads */
+        [x-cloak] {
+            display: none !important;
+        }
+
+        /* Minimal loading state */
+        .loading {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            z-index: 50;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
     <!-- Base OG tags -->
     <meta property="og:title" content="Image CDN" />
     <meta property="og:type" content="website" />
@@ -34,7 +68,55 @@
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- UnoCSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-uno"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-wind"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-attributify"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-typography"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-icons"></script>
+    <script>
+        window.__unocss = {
+            presets: [
+                window.__unocss_preset_uno,
+                window.__unocss_preset_wind,
+                window.__unocss_preset_attributify,
+                window.__unocss_preset_typography,
+                window.__unocss_preset_icons,
+            ],
+            theme: {
+                colors: {
+                    primary: 'hsl(var(--p))',
+                    'primary-focus': 'hsl(var(--pf))',
+                    'primary-content': 'hsl(var(--pc))',
+                    secondary: 'hsl(var(--s))',
+                    'secondary-focus': 'hsl(var(--sf))',
+                    'secondary-content': 'hsl(var(--sc))',
+                    accent: 'hsl(var(--a))',
+                    'accent-focus': 'hsl(var(--af))',
+                    'accent-content': 'hsl(var(--ac))',
+                    neutral: 'hsl(var(--n))',
+                    'neutral-focus': 'hsl(var(--nf))',
+                    'neutral-content': 'hsl(var(--nc))',
+                    'base-100': 'hsl(var(--b1))',
+                    'base-200': 'hsl(var(--b2))',
+                    'base-300': 'hsl(var(--b3))',
+                    'base-content': 'hsl(var(--bc))',
+                    info: 'hsl(var(--in))',
+                    success: 'hsl(var(--su))',
+                    warning: 'hsl(var(--wa))',
+                    error: 'hsl(var(--er))',
+                },
+            },
+            shortcuts: {
+                'btn': 'btn btn-primary',
+                'btn-ghost': 'btn btn-ghost',
+                'btn-error': 'btn btn-error',
+                'card': 'card bg-base-100 shadow-xl',
+            },
+        }
+    </script>
 
     <!-- Toastify CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
@@ -46,7 +128,12 @@
 </head>
 
 <body class="bg-base-200 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-6xl" x-data="imageList">
+    <!-- Loading state -->
+    <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl" x-data="imageList" x-cloak>
         <header class="text-center mb-12">
             <h1 class="text-4xl font-bold text-primary mb-4">Image CDN</h1>
             <p class="text-base-content/70">Upload and manage your images</p>
@@ -198,14 +285,9 @@
                 images: [],
                 loading: true,
                 init() {
-                    this.$watch('images', (value) => {
-                        console.log('Images array updated:', value);
-                    });
-
                     fetch('/image')
                         .then(response => response.json())
                         .then(data => {
-                            console.log('Initial image list data:', data);
                             this.images = data.hashes.map(item => ({
                                 hash: item.hash,
                                 size: item.size,
@@ -317,8 +399,6 @@
         document.body.addEventListener('htmx:afterRequest', function (evt) {
             if (evt.detail.target.id === 'previewContainer') {
                 if (evt.detail.successful) {
-                    console.log('Upload successful, response:', evt.detail.xhr.response);
-
                     // Hide preview container
                     document.getElementById('previewContainer').classList.add('hidden');
 
@@ -332,7 +412,7 @@
                     }).showToast();
 
                     // Get the Alpine component
-                    const container = document.querySelector('[x-data]');
+                    const container = document.querySelector('[x-data="imageList"]');
                     const alpineData = Alpine.$data(container);
 
                     // Set loading state
@@ -362,7 +442,10 @@
                             }).showToast();
                         });
                 } else {
-                    console.error('Upload failed:', evt.detail.xhr.response);
+                    console.error('Upload failed:', {
+                        status: evt.detail.xhr.status,
+                        response: evt.detail.xhr.response
+                    });
                     // Show error toast
                     const errorMessage = evt.detail.xhr.responseText || 'Upload failed';
                     Toastify({
@@ -386,7 +469,6 @@
             const container = document.querySelector('[x-data]');
             const alpineData = Alpine.$data(container);
 
-            console.log('Deleting image:', hash);
             fetch(`/image/${hash}`, {
                 method: 'DELETE'
             })
@@ -446,6 +528,14 @@
                         backgroundColor: "#ef4444",
                     }).showToast();
                 });
+        });
+
+        // Hide loading state when UnoCSS is ready
+        window.addEventListener('load', () => {
+            // Give UnoCSS a moment to initialize
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 100);
         });
     </script>
 </body>
