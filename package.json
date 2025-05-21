@@ -5,10 +5,10 @@
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
-		"start": "wrangler dev",
-		"cf-typegen": "wrangler types"
+		"types": "wrangler types"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
 		"typescript": "^5.5.2",
 		"wrangler": "^4.16.0"
 	}
