@@ -166,13 +166,13 @@
                                         <div class="flex items-center gap-4 p-2">
                                             <!-- Thumbnail -->
                                             <div class="w-16 h-16 flex-shrink-0">
-                                                <img :src="'/i/' + image.hash" :alt="'Image ' + image.hash"
+                                                <img :src="'/image/' + image.hash" :alt="'Image ' + image.hash"
                                                     class="w-full h-full object-cover rounded-lg" loading="lazy" />
                                             </div>
                                             <!-- Image Info -->
                                             <div class="flex-grow min-w-0">
                                                 <div class="text-sm font-mono truncate" x-text="image.hash"></div>
-                                                <div class="text-xs opacity-70 truncate" x-text="'/i/' + image.hash">
+                                                <div class="text-xs opacity-70 truncate" x-text="'/image/' + image.hash">
                                                 </div>
                                                 <div class="text-xs opacity-50"
                                                     x-text="new Date(image.uploadedAt).toLocaleString()"></div>
@@ -180,7 +180,7 @@
                                             <!-- Actions -->
                                             <div class="flex-shrink-0 flex gap-2">
                                                 <button class="btn btn-ghost btn-sm"
-                                                    @click="copyToClipboard('/i/' + image.hash)">
+                                                    @click="copyToClipboard('/image/' + image.hash)">
                                                     <i class="ph ph-copy"></i>
                                                 </button>
                                                 <button class="btn btn-ghost btn-sm text-error"

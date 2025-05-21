@@ -275,7 +275,7 @@ app.use("*", cors());
 // Helper function to generate meta tags for images
 function generateImageMetaTags(hash: string, metadata: ImageMetadata) {
 	const baseUrl = "https://cdn.artlu.workers.dev";
-	const imageUrl = `${baseUrl}/i/${hash}`;
+	const imageUrl = `${baseUrl}/image/${hash}`;
 	const uploadDate = new Date(metadata.uploadedAt).toLocaleDateString();
 
 	return [
@@ -338,7 +338,7 @@ app.get("/meta/:hash", async (c) => {
 				</head>
 				<body>
 					<script>
-						window.location.href = "/i/${hash}";
+						window.location.href = "/image/${hash}";
 					</script>
 				</body>
 			</html>
