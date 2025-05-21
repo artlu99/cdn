@@ -16,9 +16,13 @@ export interface ImageListResponse {
 }
 
 // Helper function to generate meta tags for images
-export function generateImageMetaTags(env: Env, id: string, metadata: ImageMetadata) {
+export function generateImageMetaTags(
+	env: Env,
+	id: string,
+	metadata: ImageMetadata,
+) {
 	const baseUrl = env.BASE_URL;
-	const imageUrl = `${baseUrl}/i/${id}`;
+	const imageUrl = `${baseUrl}/image/${id}`;
 	const uploadDate = new Date(metadata.uploadedAt).toLocaleDateString();
 
 	return [

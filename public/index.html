@@ -133,13 +133,13 @@
         <div class="loading-spinner"></div>
     </div>
 
-    <div class="container mx-auto px-4 py-8 max-w-6xl" x-data="imageList" x-cloak>
-        <header class="text-center mb-12">
+    <div class="container mx-auto px-2 py-8 max-w-full" x-data="imageList" x-cloak>
+        <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-primary mb-4">Image CDN</h1>
             <p class="text-base-content/70">Upload and manage your images</p>
         </header>
 
-        <section class="bg-base-100 p-8 rounded-box shadow-sm mb-8">
+        <section class="bg-base-100 p-4 sm:p-6 rounded-box shadow-sm mb-6">
             <form hx-encoding="multipart/form-data" hx-post="/upload"
                 hx-trigger="change from:#fileInput, change from:#cameraInput" hx-target="#previewContainer"
                 hx-swap="innerHTML" hx-indicator="#uploadProgress" class="flex flex-col gap-4">
@@ -154,10 +154,11 @@
                     <label
                         class="flex-1 flex flex-col items-center justify-center p-4 bg-base-200 border-2 border-base-300 rounded-lg cursor-pointer hover:border-primary transition-colors"
                         id="cameraOption">
-                        <input type="file" accept="image/*" capture="environment" id="cameraInput" name="image"
-                            class="hidden" />
+                        <input type="file" accept="image/*;capture=camera" capture="environment" id="cameraInput"
+                            name="image" class="hidden" />
                         <i class="ph ph-camera text-2xl mb-2"></i>
                         <p class="text-sm">Take Photo</p>
+                        <p class="text-xs text-base-content/70 mt-1">Medium size</p>
                     </label>
                 </div>
                 <div class="text-center text-sm text-base-content/70">
@@ -204,8 +205,8 @@
             </form>
         </section>
 
-        <section class="bg-base-100 p-8 rounded-box shadow-sm">
-            <h2 class="text-2xl font-semibold mb-6">Recent Uploads</h2>
+        <section class="bg-base-100 p-4 sm:p-6 rounded-box shadow-sm">
+            <h2 class="text-2xl font-semibold mb-4">Recent Uploads</h2>
             <div x-show="loading" class="text-center py-8 text-base-content/70">
                 <i class="ph ph-spinner text-4xl animate-spin"></i>
                 <p class="mt-4">Loading images...</p>
@@ -215,47 +216,38 @@
                 <p>No images uploaded yet</p>
             </div>
             <div x-show="!loading && images.length > 0">
-                <div class="card bg-base-200 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title">
-                            <i class="ph ph-clock"></i>
-                            Recent Uploads
-                        </h2>
-                        <div class="overflow-x-auto">
-                            <ul class="menu bg-base-100 rounded-box">
-                                <template x-for="image in images" :key="image.id">
-                                    <li>
-                                        <div class="flex items-center gap-4 p-2">
-                                            <!-- Thumbnail -->
-                                            <div class="w-16 h-16 flex-shrink-0">
-                                                <img :src="'/image/' + image.id" :alt="'Image ' + image.id"
-                                                    class="w-full h-full object-cover rounded-lg" loading="lazy" />
-                                            </div>
-                                            <!-- Image Info -->
-                                            <div class="flex-grow min-w-0">
-                                                <div class="text-sm font-mono truncate" x-text="image.id"></div>
-                                                <div class="text-xs opacity-70 truncate" x-text="'/image/' + image.id">
-                                                </div>
-                                                <div class="text-xs opacity-50"
-                                                    x-text="new Date(image.uploadedAt).toLocaleString()"></div>
-                                            </div>
-                                            <!-- Actions -->
-                                            <div class="flex-shrink-0 flex gap-2">
-                                                <button class="btn btn-ghost btn-sm"
-                                                    @click="copyToClipboard('/image/' + image.id)">
-                                                    <i class="ph ph-copy"></i>
-                                                </button>
-                                                <button class="btn btn-ghost btn-sm text-error"
-                                                    @click="deleteImage(image.id)">
-                                                    <i class="ph ph-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </template>
-                            </ul>
-                        </div>
-                    </div>
+                <div class="overflow-x-auto">
+                    <ul class="menu bg-base-100 rounded-box">
+                        <template x-for="image in images" :key="image.id">
+                            <li>
+                                <div class="flex items-center gap-4 p-2">
+                                    <!-- Thumbnail -->
+                                    <div class="w-16 h-16 flex-shrink-0">
+                                        <img :src="'/image/' + image.id" :alt="'Image ' + image.id"
+                                            class="w-full h-full object-cover rounded-lg" loading="lazy" />
+                                    </div>
+                                    <!-- Image Info -->
+                                    <div class="flex-grow min-w-0">
+                                        <div class="text-sm font-mono truncate" x-text="image.id"></div>
+                                        <div class="text-xs opacity-70 truncate" x-text="'/image/' + image.id"></div>
+                                        <div class="text-xs opacity-50"
+                                            x-text="new Date(image.uploadedAt).toLocaleString()"></div>
+                                    </div>
+                                    <!-- Actions -->
+                                    <div class="flex-shrink-0 flex gap-2">
+                                        <button class="btn btn-ghost btn-sm tooltip tooltip-left"
+                                            data-tip="Copy meta URL (includes image metadata)"
+                                            @click="copyToClipboard('/meta/' + image.id)">
+                                            <i class="ph ph-copy"></i>
+                                        </button>
+                                        <button class="btn btn-ghost btn-sm text-error" @click="deleteImage(image.id)">
+                                            <i class="ph ph-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
                 </div>
             </div>
         </section>
@@ -307,7 +299,8 @@
                         });
 
                         if (!response.ok) {
-                            throw new Error('Failed to delete image');
+                            const errorText = await response.text();
+                            throw new Error(errorText || 'Failed to delete image');
                         }
 
                         // Show success toast
@@ -336,18 +329,19 @@
                     } catch (error) {
                         console.error('Error deleting image:', error);
                         Toastify({
-                            text: "Error deleting image",
-                            duration: 3000,
+                            text: `Delete failed: ${error.message}`,
+                            duration: 5000,
                             gravity: "top",
                             position: "right",
                             backgroundColor: "#ef4444",
+                            close: true,
                         }).showToast();
                     }
                 },
                 copyToClipboard(text) {
                     navigator.clipboard.writeText(text).then(() => {
                         Toastify({
-                            text: "URL copied to clipboard",
+                            text: "Meta URL copied to clipboard",
                             duration: 2000,
                             gravity: "top",
                             position: "right",
@@ -452,14 +446,25 @@
                         status: evt.detail.xhr.status,
                         response: evt.detail.xhr.response
                     });
-                    // Show error toast
-                    const errorMessage = evt.detail.xhr.responseText || 'Upload failed';
+
+                    // Parse error message from response
+                    let errorMessage = 'Upload failed';
+                    try {
+                        const response = JSON.parse(evt.detail.xhr.response);
+                        errorMessage = response.error || response.message || errorMessage;
+                    } catch (e) {
+                        // If response isn't JSON, use status text or response text
+                        errorMessage = evt.detail.xhr.statusText || evt.detail.xhr.responseText || errorMessage;
+                    }
+
+                    // Show error toast with more details
                     Toastify({
-                        text: errorMessage,
-                        duration: 3000,
+                        text: `Upload failed: ${errorMessage}`,
+                        duration: 5000,
                         gravity: "top",
                         position: "right",
                         backgroundColor: "#ef4444",
+                        close: true,
                     }).showToast();
                 }
             }
