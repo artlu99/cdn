@@ -3,12 +3,6 @@
 	"name": "cdn",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-05-21",
-	"migrations": [
-		{
-			"new_sqlite_classes": ["MyDurableObject"],
-			"tag": "v1"
-		}
-	],
 	"vars": {
 		"BASE_URL": "https://cdn.artlu.workers.dev"
 	},
@@ -28,14 +22,6 @@
 			"binding": "CDN_IMAGES"
 		}
 	],
-	"durable_objects": {
-		"bindings": [
-			{
-				"class_name": "MyDurableObject",
-				"name": "MY_DURABLE_OBJECT"
-			}
-		]
-	},
 	"images": {
 		"binding": "IMAGES"
 	}

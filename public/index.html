@@ -71,11 +71,11 @@
 
     <!-- UnoCSS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-uno"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-wind"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-attributify"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-typography"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-uno/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-wind/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-attributify/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-typography/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-icons/dist/index.min.js"></script>
     <script>
         window.__unocss = {
             presets: [
@@ -288,7 +288,7 @@
                     fetch('/image')
                         .then(response => response.json())
                         .then(data => {
-                            this.images = data.hashes.map(item => ({
+                            this.images = data.images.map(item => ({
                                 hash: item.hash,
                                 size: item.size,
                                 uploadedAt: item.uploadedAt
@@ -327,7 +327,7 @@
                         const data = await listResponse.json();
 
                         // Update the entire images array
-                        this.images = data.hashes.map(item => ({
+                        this.images = data.images.map(item => ({
                             hash: item.hash,
                             size: item.size,
                             uploadedAt: item.uploadedAt
@@ -423,7 +423,7 @@
                         .then(response => response.json())
                         .then(data => {
                             // Update the entire images array
-                            alpineData.images = data.hashes.map(item => ({
+                            alpineData.images = data.images.map(item => ({
                                 hash: item.hash,
                                 size: item.size,
                                 uploadedAt: item.uploadedAt
@@ -499,7 +499,7 @@
                         .then(response => response.json())
                         .then(data => {
                             // Update the entire images array
-                            alpineData.images = data.hashes.map(item => ({
+                            alpineData.images = data.images.map(item => ({
                                 hash: item.hash,
                                 size: item.size,
                                 uploadedAt: item.uploadedAt

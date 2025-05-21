@@ -1,140 +1,90 @@
-/// <reference lib="webworker" />
+import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { nanoid } from "nanoid";
-
-export interface ImageMetadata {
-	id: string;
-	mimeType: string;
-	uploadedAt: number;
-	width?: number;
-	height?: number;
-	format?: string;
-	size: number;
-}
-
-export interface ImageListResponse {
-	images: ImageMetadata[];
-	total: number;
-	page: number;
-	perPage: number;
-}
+import { z } from "zod";
+import { type ImageMetadata, generateImageMetaTags } from "./helpers";
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Add CORS middleware
-app.use("*", cors());
-
-// Helper function to generate meta tags for images
-function generateImageMetaTags(env: Env, id: string, metadata: ImageMetadata) {
-	const baseUrl = env.BASE_URL;
-	const imageUrl = `${baseUrl}/i/${id}`;
-	const uploadDate = new Date(metadata.uploadedAt).toLocaleDateString();
-
-	return [
-		// Basic meta tags
-		`<title>Image uploaded on ${uploadDate}</title>`,
-		`<meta name="description" content="View image uploaded on ${uploadDate}" />`,
-
-		// Open Graph tags
-		`<meta property="og:title" content="Image uploaded on ${uploadDate}" />`,
-		`<meta property="og:type" content="article" />`,
-		`<meta property="og:url" content="${imageUrl}" />`,
-		`<meta property="og:description" content="View image uploaded on ${uploadDate}" />`,
-		`<meta property="og:site_name" content="Image CDN" />`,
-		`<meta property="og:image" content="${imageUrl}" />`,
-		`<meta property="og:image:width" content="${metadata.width || 1200}" />`,
-		`<meta property="og:image:height" content="${metadata.height || 630}" />`,
-		`<meta property="og:image:alt" content="Image uploaded on ${uploadDate}" />`,
-
-		// Twitter Card tags
-		`<meta name="twitter:card" content="summary_large_image" />`,
-		`<meta name="twitter:title" content="Image uploaded on ${uploadDate}" />`,
-		`<meta name="twitter:description" content="View image uploaded on ${uploadDate}" />`,
-		`<meta name="twitter:image" content="${imageUrl}" />`,
-
-		// Additional meta tags for better sharing
-		`<meta property="og:image:type" content="${metadata.format || "image/jpeg"}" />`,
-		`<meta property="og:image:secure_url" content="${imageUrl}" />`,
-		`<meta name="twitter:image:alt" content="Image uploaded on ${uploadDate}" />`,
-	].join("\n");
-}
-
-// Add meta tags endpoint for images
-app.get("/meta/:id", async (c) => {
-	const id = c.req.param("id");
-	const metadata = await c.env.IMAGE_METADATA.get<ImageMetadata>(id, {
-		type: "json",
-	});
-
-	if (!metadata) {
-		return c.notFound();
-	}
-
-	const metaTags = generateImageMetaTags(c.env, id, metadata);
-
-	// Set cache headers
-	c.header("Cache-Control", "public, max-age=300");
-	c.header("Content-Type", "text/html");
-
-	return c.html(`
-		<!DOCTYPE html>
-		<html>
-			<head>
-				${metaTags}
-			</head>
-			<body>
-				<script>
-					window.location.href = "/i/${id}";
-				</script>
-			</body>
-		</html>
-	`);
-});
-
 app
-	.get("/image", async (c) => {
-		const page = Number.parseInt(c.req.query("page") ?? "1");
-		const perPage = Number.parseInt(c.req.query("perPage") ?? "10");
+	.use("*", cors())
+	.get("/meta/:id", async (c) => {
+		const id = c.req.param("id");
+		const metadata = await c.env.IMAGE_METADATA.get<ImageMetadata>(id, {
+			type: "json",
+		});
 
-		if (
-			Number.isNaN(page) ||
-			page < 1 ||
-			Number.isNaN(perPage) ||
-			perPage < 1 ||
-			perPage > 100
-		) {
-			return c.text("Invalid pagination parameters", 400);
+		if (!metadata) {
+			return c.notFound();
 		}
 
-		// List all keys in KV
-		const keys = await c.env.IMAGE_METADATA.list({ limit: 1000 });
-		const allImages = await Promise.all(
-			keys.keys.map(async (key) => {
-				const metadata = await c.env.IMAGE_METADATA.get<ImageMetadata>(
-					key.name,
-					{ type: "json" },
-				);
-				return metadata;
-			}),
-		);
+		const metaTags = generateImageMetaTags(c.env, id, metadata);
 
-		// Sort by upload date and paginate
-		const sortedImages = allImages
-			.filter((img): img is ImageMetadata => img !== null)
-			.sort((a, b) => b.uploadedAt - a.uploadedAt);
+		c.header("Cache-Control", "public, max-age=300");
+		c.header("Content-Type", "text/html");
 
-		const start = (page - 1) * perPage;
-		const end = start + perPage;
-		const pageImages = sortedImages.slice(start, end);
-
-		return c.json({
-			images: pageImages,
-			total: sortedImages.length,
-			page,
-			perPage,
-		});
+		return c.html(`<!DOCTYPE html>
+<html>
+	<head>
+		${metaTags}
+	</head>
+	<body>
+		<script>
+			window.location.href = "/image/${id}";
+		</script>
+	</body>
+</html>`);
 	})
+	.get(
+		"/image",
+		zValidator(
+			"query",
+			z.object({
+				page: z
+					.string()
+					.transform((p) => Number(p))
+					.refine((p) => p > 0)
+					.optional(),
+				perPage: z
+					.string()
+					.transform((pp) => Number(pp))
+					.refine((pp) => pp > 0 && pp <= 100)
+					.optional(),
+			}),
+		),
+		async (c) => {
+			const { page = 1, perPage = 10 } = c.req.valid("query");
+
+			// List all keys in KV
+			const keys = await c.env.IMAGE_METADATA.list({ limit: 1000 });
+			const allImages = await Promise.all(
+				keys.keys.map(async (key) => {
+					const metadata = await c.env.IMAGE_METADATA.get<ImageMetadata>(
+						key.name,
+						{ type: "json" },
+					);
+					return metadata;
+				}),
+			);
+
+			// Sort by upload date and paginate
+			const sortedImages = allImages
+				.filter((img): img is ImageMetadata => img !== null)
+				.sort((a, b) => b.uploadedAt - a.uploadedAt);
+
+			const start = (page - 1) * perPage;
+			const end = start + perPage;
+			const pageImages = sortedImages.slice(start, end);
+
+			return c.json({
+				images: pageImages,
+				total: sortedImages.length,
+				page,
+				perPage,
+			});
+		},
+	)
 	.get("/image/:id", async (c) => {
 		const id = c.req.param("id");
 		const object = await c.env.CDN_IMAGES.get(id);
