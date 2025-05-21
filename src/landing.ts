@@ -298,75 +298,7 @@ export default function LandingPage() {
 							</form>
 						</div>
 					</section>
-
-					<section class="recent-uploads">
-						<h2>Recent Uploads</h2>
-						<div id="imageGrid" class="image-grid">
-							<div class="loading">Loading images...</div>
-						</div>
-					</section>
 				</div>
-
-				<script>
-					document.addEventListener('DOMContentLoaded', () => {
-						const fileInput = document.getElementById('fileInput');
-						const cameraInput = document.getElementById('cameraInput');
-						const uploadButton = document.getElementById('uploadButton');
-						const uploadForm = document.getElementById('uploadForm');
-						const imageGrid = document.getElementById('imageGrid');
-						const previewContainer = document.getElementById('previewContainer');
-						const previewImage = document.getElementById('previewImage');
-						const fileOption = document.getElementById('fileOption');
-						const cameraOption = document.getElementById('cameraOption');
-
-						let currentFile = null;
-
-						// Handle file selection
-						async function handleFileSelect(file) {
-							if (!file) return;
-							currentFile = file;
-
-							// Show preview
-							const base64 = await readFileAsBase64(file);
-							previewImage.src = base64;
-							previewContainer.classList.add('active');
-							uploadButton.disabled = false;
-
-							// Show conversion info if needed
-							const webFormats = ['image/png', 'image/jpeg', 'image/webp'];
-							if (!webFormats.includes(file.type)) {
-								const conversionInfo = document.createElement('p');
-								conversionInfo.className = 'conversion-info';
-								conversionInfo.textContent = 'This image will be converted to a web-friendly format';
-								previewContainer.appendChild(conversionInfo);
-							}
-						}
-
-						// Read file as base64
-						function readFileAsBase64(file) {
-							return new Promise((resolve, reject) => {
-								const reader = new FileReader();
-								reader.onload = () => resolve(reader.result);
-								reader.onerror = reject;
-								reader.readAsDataURL(file);
-							});
-						}
-
-						// Format file size
-						function formatFileSize(bytes) {
-							if (bytes === 0) return '0 Bytes';
-							const k = 1024;
-							const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-							const i = Math.floor(Math.log(bytes) / Math.log(k));
-							return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-						}
-
-						// Format date
-						function formatDate(timestamp) {
-							return new Date(timestamp).toLocaleDateString();
-						}
-					});
-				</script>
 			</body>
 		</html>
 	`;
