@@ -1,5 +1,12 @@
 import { DurableObject } from 'cloudflare:workers';
-import sharp from 'sharp';
+
+// Add type declarations
+declare function createImageBitmap(image: Blob): Promise<ImageBitmap>;
+interface ImageBitmap {
+	width: number;
+	height: number;
+	close(): void;
+}
 
 interface ImageRequest {
 	image: string;
@@ -34,11 +41,21 @@ export class MyDurableObject extends DurableObject {
 		return `Hello, ${name}!`;
 	}
 
-	async validateImage(buffer: Buffer): Promise<boolean> {
+	async validateImage(buffer: ArrayBuffer): Promise<boolean> {
+		// Check PNG signature (magic numbers)
+		const pngSignature = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+		const header = new Uint8Array(buffer.slice(0, 8));
+
+		// Compare the header with PNG signature
+		if (header.length !== pngSignature.length) return false;
+		for (let i = 0; i < pngSignature.length; i++) {
+			if (header[i] !== pngSignature[i]) return false;
+		}
+
+		// Try to create an image bitmap to validate the image data
 		try {
-			// Check if it's a valid PNG using sharp
-			const metadata = await sharp(buffer).metadata();
-			return metadata.format === 'png';
+			await createImageBitmap(new Blob([buffer], { type: 'image/png' }));
+			return true;
 		} catch (error) {
 			return false;
 		}
@@ -52,13 +69,12 @@ export class MyDurableObject extends DurableObject {
 		}
 		// Convert the stored value to an ArrayBuffer
 		const imageBuffer = new Uint8Array(image as ArrayBuffer);
-		const pngBuffer = await sharp(imageBuffer).png().toBuffer();
-		return pngBuffer;
+		return imageBuffer;
 	}
 
-	async storeImage(pngBuffer: Buffer): Promise<string> {
+	async storeImage(pngBuffer: ArrayBuffer): Promise<string> {
 		// Validate size
-		if (pngBuffer.length > this.MAX_SIZE) {
+		if (pngBuffer.byteLength > this.MAX_SIZE) {
 			throw new Error('Image size exceeds 10MB limit');
 		}
 
@@ -125,7 +141,7 @@ export default {
 
 				// Decode base64
 				const base64Data = json.image.replace(/^data:image\/png;base64,/, '');
-				const imageBuffer = Buffer.from(base64Data, 'base64');
+				const imageBuffer = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0)).buffer;
 
 				const hash = await stub.storeImage(imageBuffer);
 				return new Response(JSON.stringify({ hash }), {
