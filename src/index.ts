@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { nanoid } from "nanoid";
 
 interface Env {
 	MY_DURABLE_OBJECT: DurableObjectNamespace;
@@ -194,21 +195,19 @@ export class MyDurableObject extends DurableObject {
 		const { buffer: convertedBuffer, mimeType: outputFormat } =
 			await this.convertImage(imageBuffer, originalMimeType);
 
-		// Create a fast hash of the converted buffer
-		const hashBuffer = await crypto.subtle.digest("SHA-256", convertedBuffer);
-		const hashArray = Array.from(new Uint8Array(hashBuffer));
-		const hash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+		// Generate a nanoid for the image (21 characters by default)
+		const id = nanoid();
 
 		// Store converted image and metadata
-		await this.state.storage.put(hash, convertedBuffer);
-		await this.state.storage.put(`meta:${hash}`, {
+		await this.state.storage.put(id, convertedBuffer);
+		await this.state.storage.put(`meta:${id}`, {
 			size: convertedBuffer.byteLength,
 			uploadedAt: Date.now(),
 			format: outputFormat,
 			originalFormat: originalMimeType,
 		});
 
-		return hash;
+		return id;
 	}
 
 	async retrieveImage(hash: string) {
