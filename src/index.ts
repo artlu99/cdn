@@ -252,7 +252,6 @@ export class MyDurableObject extends DurableObject {
 const app = new Hono<{ Bindings: Env }>();
 app
 	.use("*", cors())
-	.get("/", (c) => c.html(LandingPage()))
 	.get("/image", async (c) => {
 		const page = Number.parseInt(c.req.query("page") ?? "1");
 		const perPage = Number.parseInt(c.req.query("perPage") ?? "10");
