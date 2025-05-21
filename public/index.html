@@ -3,7 +3,11 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
     <title>Image CDN</title>
 
     <!-- Critical CSS to prevent FOUC -->
@@ -70,7 +74,7 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
 
     <!-- UnoCSS CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
     <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-uno/dist/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-wind/dist/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-attributify/dist/index.min.js"></script>
@@ -118,9 +122,8 @@
         }
     </script>
 
-    <!-- Toastify CSS -->
+    <!-- Toastify -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-    <!-- Toastify JS -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
     <!-- Phosphor Icons -->
@@ -223,21 +226,19 @@
                                 <div class="flex items-center gap-4 p-2">
                                     <!-- Thumbnail -->
                                     <div class="w-16 h-16 flex-shrink-0">
-                                        <img :src="'/image/' + image.id" :alt="'Image ' + image.id"
+                                        <img :src="'/' + image.id + '/raw'" :alt="'Image ' + image.id"
                                             class="w-full h-full object-cover rounded-lg" loading="lazy" />
                                     </div>
                                     <!-- Image Info -->
                                     <div class="flex-grow min-w-0">
                                         <div class="text-sm font-mono truncate" x-text="image.id"></div>
-                                        <div class="text-xs opacity-70 truncate" x-text="'/image/' + image.id"></div>
+                                        <div class="text-xs opacity-70 truncate" x-text="'/' + image.id"></div>
                                         <div class="text-xs opacity-50"
                                             x-text="new Date(image.uploadedAt).toLocaleString()"></div>
                                     </div>
                                     <!-- Actions -->
                                     <div class="flex-shrink-0 flex gap-2">
-                                        <button class="btn btn-ghost btn-sm tooltip tooltip-left"
-                                            data-tip="Copy meta URL (includes image metadata)"
-                                            @click="copyToClipboard('/meta/' + image.id)">
+                                        <button class="btn btn-ghost btn-sm" @click="copyToClipboard('/' + image.id)">
                                             <i class="ph ph-copy"></i>
                                         </button>
                                         <button class="btn btn-ghost btn-sm text-error" @click="deleteImage(image.id)">
@@ -294,7 +295,7 @@
                 },
                 async deleteImage(id) {
                     try {
-                        const response = await fetch(`/image/${id}`, {
+                        const response = await fetch(`/${id}`, {
                             method: 'DELETE'
                         });
 
@@ -341,7 +342,7 @@
                 copyToClipboard(text) {
                     navigator.clipboard.writeText(text).then(() => {
                         Toastify({
-                            text: "Meta URL copied to clipboard",
+                            text: "URL copied to clipboard",
                             duration: 2000,
                             gravity: "top",
                             position: "right",
@@ -480,7 +481,7 @@
             const container = document.querySelector('[x-data]');
             const alpineData = Alpine.$data(container);
 
-            fetch(`/image/${id}`, {
+            fetch(`/${id}`, {
                 method: 'DELETE'
             })
                 .then(response => {

@@ -9,7 +9,7 @@ const app = new Hono<{ Bindings: Env }>();
 
 app
 	.use("*", cors())
-	.get("/meta/:id", async (c) => {
+	.get("/:id", async (c) => {
 		const id = c.req.param("id");
 		const metadata = await c.env.IMAGE_METADATA.get<ImageMetadata>(id, {
 			type: "json",
@@ -19,22 +19,52 @@ app
 			return c.notFound();
 		}
 
+		// Check if this is a raw request (e.g., from an image viewer)
+		const userAgent = c.req.header("User-Agent") || "";
+		const isImageRequest =
+			userAgent.includes("image/") ||
+			c.req.header("Accept")?.includes("image/") ||
+			c.req.query("raw") === "true";
+
+		if (isImageRequest) {
+			const object = await c.env.CDN_IMAGES.get(id);
+			if (!object) return c.notFound();
+			return new Response(object.body, {
+				headers: {
+					"Content-Type": metadata.mimeType,
+					"Cache-Control": "public, max-age=300",
+				},
+			});
+		}
+
+		// Otherwise, return the HTML with meta tags
 		const metaTags = generateImageMetaTags(c.env, id, metadata);
-
-		c.header("Cache-Control", "public, max-age=300");
-		c.header("Content-Type", "text/html");
-
 		return c.html(`<!DOCTYPE html>
 <html>
 	<head>
 		${metaTags}
 	</head>
 	<body>
-		<script>
-			window.location.href = "/image/${id}";
-		</script>
+		<img src="/${id}/raw" alt="Image uploaded on ${new Date(metadata.uploadedAt).toLocaleDateString()}" />
 	</body>
 </html>`);
+	})
+	.get("/:id/raw", async (c) => {
+		const id = c.req.param("id");
+		const object = await c.env.CDN_IMAGES.get(id);
+		if (!object) return c.notFound();
+
+		const metadata = await c.env.IMAGE_METADATA.get<ImageMetadata>(id, {
+			type: "json",
+		});
+		if (!metadata) return c.notFound();
+
+		return new Response(object.body, {
+			headers: {
+				"Content-Type": metadata.mimeType,
+				"Cache-Control": "public, max-age=300",
+			},
+		});
 	})
 	.get(
 		"/image",
@@ -85,28 +115,6 @@ app
 			});
 		},
 	)
-	.get("/image/:id", async (c) => {
-		const id = c.req.param("id");
-		const object = await c.env.CDN_IMAGES.get(id);
-
-		if (!object) {
-			return c.text("Image not found", 404);
-		}
-
-		const metadata = await c.env.IMAGE_METADATA.get<ImageMetadata>(id, {
-			type: "json",
-		});
-		if (!metadata) {
-			return c.text("Image metadata not found", 404);
-		}
-
-		return new Response(object.body, {
-			headers: {
-				"Content-Type": metadata.mimeType,
-				"Cache-Control": "public, max-age=300",
-			},
-		});
-	})
 	.put("/image", async (c) => {
 		try {
 			const json = await c.req.json();
@@ -206,7 +214,7 @@ app
 			return c.text("Invalid request", 400);
 		}
 	})
-	.delete("/image/:id", async (c) => {
+	.delete("/:id", async (c) => {
 		const id = c.req.param("id");
 
 		// Delete from R2
