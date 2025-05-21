@@ -363,7 +363,8 @@ app
 			return c.text("Invalid pagination parameters", 400);
 		}
 
-		const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
+		// Use a consistent ID for all operations
+		const id = c.env.MY_DURABLE_OBJECT.idFromName("images");
 		const stub = c.env.MY_DURABLE_OBJECT.get(id);
 		const result = await (stub as unknown as MyDurableObject).listImages(
 			page,
@@ -373,7 +374,8 @@ app
 	})
 	.get("/image/:hash", async (c) => {
 		const hash = c.req.param("hash");
-		const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
+		// Use the same ID as other operations
+		const id = c.env.MY_DURABLE_OBJECT.idFromName("images");
 		const stub = c.env.MY_DURABLE_OBJECT.get(id);
 
 		const result = await (stub as unknown as MyDurableObject).retrieveImage(
@@ -393,6 +395,42 @@ app
 			},
 		});
 	})
+	.put("/image", async (c) => {
+		try {
+			const json = (await c.req.json()) as ImageRequest;
+			if (
+				!json.image ||
+				typeof json.image !== "string" ||
+				!json.mimeType ||
+				typeof json.mimeType !== "string"
+			) {
+				return c.text(
+					"Invalid request: image field must be a base64 string and mimeType must be specified",
+					400,
+				);
+			}
+
+			const id = c.env.MY_DURABLE_OBJECT.idFromName("images");
+			const stub = c.env.MY_DURABLE_OBJECT.get(id);
+
+			// Decode base64
+			const base64Data = json.image.replace(/^data:image\/\w+;base64,/, "");
+			const imageBuffer = Uint8Array.from(atob(base64Data), (c) =>
+				c.charCodeAt(0),
+			).buffer;
+
+			const hash = await (stub as unknown as MyDurableObject).storeImage(
+				imageBuffer,
+				json.mimeType,
+			);
+			return c.json({ hash });
+		} catch (error) {
+			if (error instanceof Error) {
+				return c.text(error.message, 400);
+			}
+			return c.text("Invalid request", 400);
+		}
+	})
 	.post("/upload", async (c) => {
 		try {
 			const formData = await c.req.formData();
@@ -410,7 +448,7 @@ app
 			// Convert File to ArrayBuffer
 			const buffer = await file.arrayBuffer();
 
-			const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
+			const id = c.env.MY_DURABLE_OBJECT.idFromName("images");
 			const stub = c.env.MY_DURABLE_OBJECT.get(id);
 
 			const hash = await (stub as unknown as MyDurableObject).storeImage(
@@ -433,7 +471,7 @@ app
 	})
 	.delete("/image/:hash", async (c) => {
 		const hash = c.req.param("hash");
-		const id = c.env.MY_DURABLE_OBJECT.idFromName("foo");
+		const id = c.env.MY_DURABLE_OBJECT.idFromName("images");
 		const stub = c.env.MY_DURABLE_OBJECT.get(id);
 
 		await (stub as unknown as MyDurableObject).deleteImage(hash);

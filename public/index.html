@@ -241,22 +241,18 @@
                         backgroundColor: "#22c55e",
                     }).showToast();
 
-                    // Refresh the image list using Alpine.js
+                    // Get the Alpine component
                     const container = document.querySelector('[x-data]');
                     const alpineData = Alpine.$data(container);
 
                     // Set loading state
                     alpineData.loading = true;
 
-                    console.log('Fetching updated image list...');
+                    // Fetch updated list
                     fetch('/image')
-                        .then(response => {
-                            console.log('Image list response status:', response.status);
-                            return response.json();
-                        })
+                        .then(response => response.json())
                         .then(data => {
-                            console.log('Image list data:', data);
-                            // Map the hashes array to the expected format and update Alpine data
+                            // Update the entire images array
                             alpineData.images = data.hashes.map(item => ({
                                 hash: item.hash,
                                 size: item.size,
@@ -296,6 +292,10 @@
             const deleteButton = document.querySelector('[data-hash]');
             const hash = deleteButton.getAttribute('data-hash');
 
+            // Get the Alpine component
+            const container = document.querySelector('[x-data]');
+            const alpineData = Alpine.$data(container);
+
             console.log('Deleting image:', hash);
             fetch(`/image/${hash}`, {
                 method: 'DELETE'
@@ -319,24 +319,26 @@
                         backgroundColor: "#22c55e",
                     }).showToast();
 
-                    // Update Alpine.js data directly
-                    const container = document.querySelector('[x-data]');
-                    const alpineData = Alpine.$data(container);
+                    // Set loading state
+                    alpineData.loading = true;
 
-                    // Remove the deleted image from the array
-                    alpineData.images = alpineData.images.filter(img => img.hash !== hash);
-
-                    // Refresh the total count
+                    // Fetch updated list
                     fetch('/image')
                         .then(response => response.json())
                         .then(data => {
-                            // Only update the total count, keep the filtered images array
-                            alpineData.total = data.total;
+                            // Update the entire images array
+                            alpineData.images = data.hashes.map(item => ({
+                                hash: item.hash,
+                                size: item.size,
+                                uploadedAt: item.uploadedAt
+                            }));
+                            alpineData.loading = false;
                         })
                         .catch(error => {
-                            console.error('Error refreshing total count:', error);
+                            console.error('Error refreshing images:', error);
+                            alpineData.loading = false;
                             Toastify({
-                                text: "Error refreshing image count",
+                                text: "Error refreshing image list",
                                 duration: 3000,
                                 gravity: "top",
                                 position: "right",
