@@ -1,9 +1,9 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { nanoid } from "nanoid";
 import { z } from "zod";
 import type { ImageMetadata, ImageListResponse } from "./types";
+import { sonyflake } from "./sonyflake62";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -85,7 +85,7 @@ app
 				return c.text("Invalid file type. Only images are allowed.", 400);
 			}
 
-			const id = nanoid();
+			const id = sonyflake.toBase62(sonyflake.nextId());
 			const buffer = await file.arrayBuffer();
 
 			// metadata in KV
