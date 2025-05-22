@@ -18,12 +18,12 @@ app
 			z.object({
 				page: z
 					.string()
-					.transform((p) => Number(p))
+					.transform(Number)
 					.refine((p) => p > 0)
 					.optional(),
 				perPage: z
 					.string()
-					.transform((pp) => Number(pp))
+					.transform(Number)
 					.refine((pp) => pp > 0 && pp <= 100)
 					.optional(),
 			}),
@@ -33,11 +33,10 @@ app
 
 			const keys = await c.env.image_metadata.list({ limit: 1000 });
 			const allImages = await Promise.all(
-				keys.keys.map(async (key) => {
-					const metadata = await c.env.image_metadata.get<ImageMetadata>(
-						key.name,
-						{ type: "json" },
-					);
+				keys.keys.map((key) => {
+					const metadata = c.env.image_metadata.get<ImageMetadata>(key.name, {
+						type: "json",
+					});
 					return metadata;
 				}),
 			);
@@ -67,7 +66,9 @@ app
 		const metadata = await c.env.image_metadata.get<ImageMetadata>(id, {
 			type: "json",
 		});
-		if (!metadata) return c.notFound();
+		if (!metadata) {
+			return c.notFound();
+		}
 
 		return new Response(object.body, {
 			headers: {
@@ -112,15 +113,14 @@ app
 				message: "Image uploaded successfully",
 			});
 		} catch (error) {
-			if (error instanceof Error) {
-				return c.text(error.message, 400);
-			}
-			return c.text("Invalid request", 400);
+			return c.text(
+				error instanceof Error ? error.message : "Invalid request",
+				400,
+			);
 		}
 	})
 	.delete("/:id", async (c) => {
 		const id = c.req.param("id");
-
 		if (ALLOW_DELETES) {
 			await c.env.cdn_images.delete(id);
 
