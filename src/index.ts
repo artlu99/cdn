@@ -5,6 +5,8 @@ import { z } from "zod";
 import type { ImageMetadata, ImageListResponse } from "./types";
 import { sonyflake } from "./sonyflake62";
 
+const ALLOW_DELETES = false;
+
 const app = new Hono<{ Bindings: Env }>();
 
 app
@@ -119,11 +121,14 @@ app
 	.delete("/:id", async (c) => {
 		const id = c.req.param("id");
 
-		await c.env.cdn_images.delete(id);
+		if (ALLOW_DELETES) {
+			await c.env.cdn_images.delete(id);
 
-		await c.env.image_metadata.delete(id);
+			await c.env.image_metadata.delete(id);
 
-		return c.text("Image deleted", 200);
+			return c.text("Image deleted", 200);
+		}
+		return c.text("Image deletion disabled", 403);
 	});
 
 export default app;
