@@ -164,25 +164,26 @@
                             <li>
                                 <div class="flex items-center gap-4 p-0">
                                     <!-- Thumbnail -->
-                                    <div class="w-16 h-16 flex-shrink-0">
+                                    <div class="w-16 h-16 flex-shrink-0 cursor-pointer" @click="showPreview(image)">
                                         <img :src="'/' + image.id" :alt="'Image ' + image.id"
                                             class="w-full h-full object-cover rounded-lg" loading="lazy" />
                                     </div>
                                     <!-- Image Info -->
-                                    <div class="flex-grow min-w-0">
+                                    <div class="flex-grow min-w-0 cursor-pointer" @click="showPreview(image)">
                                         <div class="text-sm font-mono truncate" x-text="'/' + image.id"></div>
-                                        <div class="text-xs opacity-70" x-text="formatBytes(image.size)"></div>
+                                        <div class="text-xs opacity-70" x-text="$store.utils.formatBytes(image.size)">
+                                        </div>
                                         <div class="text-xs opacity-50"
                                             x-text="new Date(image.uploadedAt).toLocaleString()"></div>
                                     </div>
                                     <!-- Actions -->
                                     <div class="flex-shrink-0 flex gap-2">
                                         <button class="btn btn-ghost btn-sm"
-                                            @click="copyToClipboard('https://cdn.artlu.xyz/' + image.id)">
+                                            @click.stop="$store.utils.copyToClipboard('https://cdn.artlu.xyz/' + image.id)">
                                             <i class="ph ph-copy"></i>
                                         </button>
                                         <button class="btn btn-ghost btn-sm text-error/70"
-                                            @click="deleteImage(image.id)">
+                                            @click.stop="$store.utils.deleteImage(image.id)">
                                             <i class="ph ph-trash"></i>
                                         </button>
                                     </div>
@@ -213,13 +214,57 @@
         </form>
     </dialog>
 
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('imageList', () => ({
-                images: [],
-                loading: true,
-                refreshInterval: null,
+    <!-- Preview Modal -->
+    <div x-data="{ 
+        showPreview: false,
+        previewImage: null,
+        previewId: null,
+        previewSize: null,
+        previewDate: null
+    }" x-show="showPreview" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center"
+        @keydown.escape.window="showPreview = false" id="previewModal">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showPreview = false">
+        </div>
 
+        <!-- Modal Content -->
+        <div class="relative bg-base-100 rounded-lg shadow-xl max-w-4xl w-full mx-4 overflow-hidden"
+            x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95">
+
+            <!-- Image Preview -->
+            <div class="relative aspect-video bg-base-300">
+                <img :src="previewImage" :alt="'Image ' + previewId" class="w-full h-full object-contain" />
+            </div>
+
+            <!-- Image Info -->
+            <div class="p-4 border-t border-base-300">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="font-mono text-sm" x-text="'/' + previewId"></div>
+                        <div class="text-xs opacity-70" x-text="$store.utils.formatBytes(previewSize)"></div>
+                        <div class="text-xs opacity-50" x-text="new Date(previewDate).toLocaleString()"></div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn btn-ghost btn-sm"
+                            @click="$store.utils.copyToClipboard('https://cdn.artlu.xyz/' + previewId)">
+                            <i class="ph ph-copy"></i>
+                        </button>
+                        <button class="btn btn-ghost btn-sm text-error/70" @click="$store.utils.deleteImage(previewId)">
+                            <i class="ph ph-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Create a store for shared utilities
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('utils', {
                 formatBytes(bytes) {
                     if (bytes === 0) return '0 B';
                     const k = 1024;
@@ -228,37 +273,31 @@
                     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
                 },
 
-                async refreshList() {
-                    try {
-                        const response = await fetch('/image');
-                        const data = await response.json();
-                        this.images = data.images.map(item => ({
-                            id: item.id,
-                            size: item.size,
-                            uploadedAt: item.uploadedAt
-                        }));
-                    } catch (error) {
-                        console.error('Error refreshing images:', error);
-                    }
+                // Pre-fetch an image
+                prefetchImage(id) {
+                    const img = new Image();
+                    img.src = '/' + id;
                 },
 
-                init() {
-                    // Initial load
-                    this.refreshList().finally(() => {
-                        this.loading = false;
+                copyToClipboard(text) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        Toastify({
+                            text: "URL copied to clipboard",
+                            duration: 2000,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#22c55e",
+                        }).showToast();
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                        Toastify({
+                            text: "Failed to copy URL",
+                            duration: 2000,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#ef4444",
+                        }).showToast();
                     });
-
-                    // Set up auto-refresh every minute
-                    this.refreshInterval = setInterval(() => {
-                        this.refreshList();
-                    }, 60000); // every 1 minute 
-                },
-
-                // Clean up interval when component is destroyed
-                destroy() {
-                    if (this.refreshInterval) {
-                        clearInterval(this.refreshInterval);
-                    }
                 },
 
                 async deleteImage(id) {
@@ -281,20 +320,17 @@
                             backgroundColor: "#22c55e",
                         }).showToast();
 
-                        // Set loading state
-                        this.loading = true;
+                        // Close the preview if it's open
+                        const preview = document.querySelector('[x-data]');
+                        const previewData = Alpine.$data(preview);
+                        previewData.showPreview = false;
 
-                        // Fetch updated list
-                        const listResponse = await fetch('/image');
-                        const data = await listResponse.json();
-
-                        // Update the entire images array
-                        this.images = data.images.map(item => ({
-                            id: item.id,
-                            size: item.size,
-                            uploadedAt: item.uploadedAt
-                        }));
-                        this.loading = false;
+                        // Refresh the list
+                        const container = document.querySelector('[x-data="imageList"]');
+                        const alpineData = Alpine.$data(container);
+                        alpineData.loading = true;
+                        await alpineData.refreshList();
+                        alpineData.loading = false;
                     } catch (error) {
                         console.error('Error deleting image:', error);
                         Toastify({
@@ -306,26 +342,56 @@
                             close: true,
                         }).showToast();
                     }
+                }
+            });
+
+            Alpine.data('imageList', () => ({
+                images: [],
+                loading: true,
+                refreshInterval: null,
+
+                async refreshList() {
+                    try {
+                        const response = await fetch('/image');
+                        const data = await response.json();
+                        this.images = data.images.map(item => ({
+                            id: item.id,
+                            size: item.size,
+                            uploadedAt: item.uploadedAt
+                        }));
+
+                        // Pre-fetch all images after list loads
+                        this.images.forEach(image => {
+                            Alpine.store('utils').prefetchImage(image.id);
+                        });
+                    } catch (error) {
+                        console.error('Error refreshing images:', error);
+                    }
                 },
-                copyToClipboard(text) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        Toastify({
-                            text: "URL copied to clipboard",
-                            duration: 2000,
-                            gravity: "top",
-                            position: "right",
-                            backgroundColor: "#22c55e",
-                        }).showToast();
-                    }).catch(err => {
-                        console.error('Failed to copy:', err);
-                        Toastify({
-                            text: "Failed to copy URL",
-                            duration: 2000,
-                            gravity: "top",
-                            position: "right",
-                            backgroundColor: "#ef4444",
-                        }).showToast();
+
+                showPreview(image) {
+                    // Get the preview modal component using the ID
+                    const preview = document.getElementById('previewModal');
+                    const previewData = Alpine.$data(preview);
+
+                    // Update preview data
+                    previewData.previewImage = '/' + image.id;
+                    previewData.previewId = image.id;
+                    previewData.previewSize = image.size;
+                    previewData.previewDate = image.uploadedAt;
+                    previewData.showPreview = true;
+                },
+
+                init() {
+                    // Initial load
+                    this.refreshList().finally(() => {
+                        this.loading = false;
                     });
+
+                    // Set up auto-refresh every minute
+                    this.refreshInterval = setInterval(() => {
+                        this.refreshList();
+                    }, 60000); // every 1 minute
                 }
             }));
         });
