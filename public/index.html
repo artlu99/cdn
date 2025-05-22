@@ -224,7 +224,7 @@
                     <ul class="menu bg-base-100 rounded-box">
                         <template x-for="image in images" :key="image.id">
                             <li>
-                                <div class="flex items-center gap-4 p-2">
+                                <div class="flex items-center gap-4 p-0">
                                     <!-- Thumbnail -->
                                     <div class="w-16 h-16 flex-shrink-0">
                                         <img :src="'/' + image.id" :alt="'Image ' + image.id"
@@ -232,8 +232,7 @@
                                     </div>
                                     <!-- Image Info -->
                                     <div class="flex-grow min-w-0">
-                                        <div class="text-sm font-mono truncate" x-text="image.id"></div>
-                                        <div class="text-xs opacity-70 truncate" x-text="'/' + image.id"></div>
+                                        <div class="text-sm font-mono truncate" x-text="'/' + image.id"></div>
                                         <div class="text-xs opacity-50"
                                             x-text="new Date(image.uploadedAt).toLocaleString()"></div>
                                     </div>
@@ -243,7 +242,7 @@
                                             @click="copyToClipboard('https://cdn.artlu.xyz/' + image.id)">
                                             <i class="ph ph-copy"></i>
                                         </button>
-                                        <button class="btn btn-ghost btn-sm text-error" @click="deleteImage(image.id)">
+                                        <button class="btn btn-ghost btn-sm text-error/70" @click="deleteImage(image.id)">
                                             <i class="ph ph-trash"></i>
                                         </button>
                                     </div>
