@@ -123,9 +123,7 @@ app
 		const id = c.req.param("id");
 		if (ALLOW_DELETES) {
 			await c.env.cdn_images.delete(id);
-
 			await c.env.image_metadata.delete(id);
-
 			return c.text("Image deleted", 200);
 		}
 		return c.text("Image deletion disabled", 403);

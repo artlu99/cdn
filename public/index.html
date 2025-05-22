@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="bumblebee forest">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="utf-8" />
@@ -11,38 +11,7 @@
     <title>cdn.artlu.xyz</title>
 
     <!-- Critical CSS to prevent FOUC -->
-    <style>
-        /* Hide content until UnoCSS loads */
-        [un-cloak] {
-            display: none !important;
-        }
-
-        /* Minimal loading state */
-        .loading {
-            position: fixed;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f3f4f6;
-            z-index: 50;
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #e5e7eb;
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/critical.css">
 
     <!-- Base OG tags -->
     <meta property="og:title" content="Image CDN" />
@@ -75,49 +44,8 @@
 
     <!-- UnoCSS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime/attributify.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime/preset-icons.global.js"></script>
-    <script>
-        window.__unocss = {
-            presets: [
-                window.__unocss_preset_uno,
-                window.__unocss_preset_wind,
-                window.__unocss_preset_attributify,
-                window.__unocss_preset_typography,
-                window.__unocss_preset_icons,
-            ],
-            theme: {
-                colors: {
-                    primary: 'hsl(var(--p))',
-                    'primary-focus': 'hsl(var(--pf))',
-                    'primary-content': 'hsl(var(--pc))',
-                    secondary: 'hsl(var(--s))',
-                    'secondary-focus': 'hsl(var(--sf))',
-                    'secondary-content': 'hsl(var(--sc))',
-                    accent: 'hsl(var(--a))',
-                    'accent-focus': 'hsl(var(--af))',
-                    'accent-content': 'hsl(var(--ac))',
-                    neutral: 'hsl(var(--n))',
-                    'neutral-focus': 'hsl(var(--nf))',
-                    'neutral-content': 'hsl(var(--nc))',
-                    'base-100': 'hsl(var(--b1))',
-                    'base-200': 'hsl(var(--b2))',
-                    'base-300': 'hsl(var(--b3))',
-                    'base-content': 'hsl(var(--bc))',
-                    info: 'hsl(var(--in))',
-                    success: 'hsl(var(--su))',
-                    warning: 'hsl(var(--wa))',
-                    error: 'hsl(var(--er))',
-                },
-            },
-            shortcuts: {
-                'btn': 'btn btn-primary',
-                'btn-ghost': 'btn btn-ghost',
-                'btn-error': 'btn btn-error',
-                'card': 'card bg-base-100 shadow-xl',
-            },
-        }
-    </script>
+    <script src="/uno.js"></script>
 
     <!-- DaisyUI with themes -->
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5.0.0/dist/full.min.css" rel="stylesheet" type="text/css" />
@@ -129,6 +57,16 @@
 
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Alpine Plugins -->
+    <script type="module">
+        // Wait for Alpine to be available
+        window.addEventListener('alpine:init', () => {
+            import('./plugins/pretty-bytes.js').then(module => {
+                window.Alpine.plugin(module.default);
+            });
+        });
+    </script>
 </head>
 
 <body class="bg-base-200 min-h-screen">
@@ -233,6 +171,7 @@
                                     <!-- Image Info -->
                                     <div class="flex-grow min-w-0">
                                         <div class="text-sm font-mono truncate" x-text="'/' + image.id"></div>
+                                        <div class="text-xs opacity-70" x-text="formatBytes(image.size)"></div>
                                         <div class="text-xs opacity-50"
                                             x-text="new Date(image.uploadedAt).toLocaleString()"></div>
                                     </div>
@@ -242,7 +181,8 @@
                                             @click="copyToClipboard('https://cdn.artlu.xyz/' + image.id)">
                                             <i class="ph ph-copy"></i>
                                         </button>
-                                        <button class="btn btn-ghost btn-sm text-error/70" @click="deleteImage(image.id)">
+                                        <button class="btn btn-ghost btn-sm text-error/70"
+                                            @click="deleteImage(image.id)">
                                             <i class="ph ph-trash"></i>
                                         </button>
                                     </div>
@@ -278,6 +218,15 @@
             Alpine.data('imageList', () => ({
                 images: [],
                 loading: true,
+
+                formatBytes(bytes) {
+                    if (bytes === 0) return '0 B';
+                    const k = 1024;
+                    const sizes = ['B', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+                },
+
                 init() {
                     fetch('/image')
                         .then(response => response.json())
@@ -331,7 +280,7 @@
                     } catch (error) {
                         console.error('Error deleting image:', error);
                         Toastify({
-                            text: `Delete failed: ${error.message}`,
+                            text: error.message,
                             duration: 5000,
                             gravity: "top",
                             position: "right",
