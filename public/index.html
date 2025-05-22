@@ -218,6 +218,7 @@
             Alpine.data('imageList', () => ({
                 images: [],
                 loading: true,
+                refreshInterval: null,
 
                 formatBytes(bytes) {
                     if (bytes === 0) return '0 B';
@@ -227,22 +228,39 @@
                     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
                 },
 
-                init() {
-                    fetch('/image')
-                        .then(response => response.json())
-                        .then(data => {
-                            this.images = data.images.map(item => ({
-                                id: item.id,
-                                size: item.size,
-                                uploadedAt: item.uploadedAt
-                            }));
-                            this.loading = false;
-                        })
-                        .catch(error => {
-                            console.error('Error loading images:', error);
-                            this.loading = false;
-                        });
+                async refreshList() {
+                    try {
+                        const response = await fetch('/image');
+                        const data = await response.json();
+                        this.images = data.images.map(item => ({
+                            id: item.id,
+                            size: item.size,
+                            uploadedAt: item.uploadedAt
+                        }));
+                    } catch (error) {
+                        console.error('Error refreshing images:', error);
+                    }
                 },
+
+                init() {
+                    // Initial load
+                    this.refreshList().finally(() => {
+                        this.loading = false;
+                    });
+
+                    // Set up auto-refresh every minute
+                    this.refreshInterval = setInterval(() => {
+                        this.refreshList();
+                    }, 60000); // every 1 minute 
+                },
+
+                // Clean up interval when component is destroyed
+                destroy() {
+                    if (this.refreshInterval) {
+                        clearInterval(this.refreshInterval);
+                    }
+                },
+
                 async deleteImage(id) {
                     try {
                         const response = await fetch(`/${id}`, {
