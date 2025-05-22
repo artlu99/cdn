@@ -6,6 +6,8 @@ export interface ImageMetadata {
 	height?: number;
 	format?: string;
 	size: number;
+	goodUntil?: number;
+	viewsCountdown?: number;
 }
 
 export interface ImageListResponse {
