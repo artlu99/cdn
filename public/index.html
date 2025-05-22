@@ -13,7 +13,7 @@
     <!-- Critical CSS to prevent FOUC -->
     <style>
         /* Hide content until UnoCSS loads */
-        [x-cloak] {
+        [un-cloak] {
             display: none !important;
         }
 
@@ -74,12 +74,9 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
 
     <!-- UnoCSS CDN -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-uno/dist/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-wind/dist/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-attributify/dist/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-typography/dist/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@unocss/preset-icons/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime/attributify.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime/preset-icons.global.js"></script>
     <script>
         window.__unocss = {
             presets: [
@@ -136,7 +133,7 @@
         <div class="loading-spinner"></div>
     </div>
 
-    <div class="container mx-auto px-2 py-8 max-w-full" x-data="imageList" x-cloak>
+    <div class="container mx-auto px-2 py-8 max-w-full" x-data="imageList" un-cloak>
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-primary mb-4">Image CDN</h1>
             <p class="text-base-content/70">Upload and manage your images</p>
@@ -238,7 +235,8 @@
                                     </div>
                                     <!-- Actions -->
                                     <div class="flex-shrink-0 flex gap-2">
-                                        <button class="btn btn-ghost btn-sm" @click="copyToClipboard('/' + image.id)">
+                                        <button class="btn btn-ghost btn-sm"
+                                            @click="copyToClipboard('https://cdn.artlu.xyz/' + image.id)">
                                             <i class="ph ph-copy"></i>
                                         </button>
                                         <button class="btn btn-ghost btn-sm text-error" @click="deleteImage(image.id)">

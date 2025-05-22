@@ -4,7 +4,7 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2025-05-21",
 	"vars": {
-		"BASE_URL": "https://cdn.artlu.workers.dev"
+		"BASE_URL": "https://cdn.artlu.xyz"
 	},
 	"assets": {
 		"binding": "ASSETS",
@@ -12,14 +12,14 @@
 	},
 	"kv_namespaces": [
 		{
-			"binding": "IMAGE_METADATA",
-			"id": "458a51f468024fd19966b4651085be0e"
+			"binding": "image_metadata",
+			"id": "ee46dceb3e8b4d919e2fc4c91081209b"
 		}
 	],
 	"r2_buckets": [
 		{
 			"bucket_name": "cdn-images",
-			"binding": "CDN_IMAGES"
+			"binding": "cdn_images"
 		}
 	],
 	"images": {
