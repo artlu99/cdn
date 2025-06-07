@@ -1,8 +1,8 @@
 {
 	"name": "cdn",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
-	"description": "simple image CDN on Cloudflare Durable Objects",
+	"description": "simple image CDN on Cloudflare KV + R2",
 	"main": "src/index.ts",
 	"scripts": {
 		"deploy": "wrangler deploy",
