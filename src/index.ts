@@ -84,8 +84,8 @@ app
 			if (!file) {
 				return c.text("No file provided", 400);
 			}
-			if (!file.type.startsWith("image/")) {
-				return c.text("Invalid file type. Only images are allowed.", 400);
+			if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+				return c.text("Invalid file type. Only images and videos are allowed.", 400);
 			}
 
 			const id = sonyflake.toBase62(sonyflake.nextId());

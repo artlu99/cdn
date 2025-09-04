@@ -89,14 +89,14 @@
                     <label
                         class="flex-1 flex flex-col items-center justify-center p-4 bg-base-200 border-2 border-base-300 rounded-lg cursor-pointer hover:border-primary transition-colors"
                         id="fileOption">
-                        <input type="file" accept="image/*" id="fileInput" name="image" class="hidden" />
+                        <input type="file" accept="image/*,video/*" id="fileInput" name="image" class="hidden" />
                         <i class="ph ph-plus-circle text-2xl mb-2"></i>
                         <p class="text-sm">Choose File</p>
                     </label>
                     <label
                         class="flex-1 flex flex-col items-center justify-center p-4 bg-base-200 border-2 border-base-300 rounded-lg cursor-pointer hover:border-primary transition-colors"
                         id="cameraOption">
-                        <input type="file" accept="image/*;capture=camera" capture="environment" id="cameraInput"
+                        <input type="file" accept="image/*,video/*;capture=camera" capture="environment" id="cameraInput"
                             name="image" class="hidden" />
                         <i class="ph ph-camera text-2xl mb-2"></i>
                         <p class="text-sm">Take Photo</p>
@@ -121,7 +121,12 @@
 
                 <div id="previewContainer" class="hidden mt-4 text-center">
                     <div class="flex flex-col items-center gap-4">
-                        <img id="previewImage" class="max-w-full max-h-[300px] rounded-lg" alt="Preview" />
+                        <img id="previewImage" class="max-w-full max-h-[300px] rounded-lg hidden" alt="Preview" />
+                        <div id="previewVideo" class="flex flex-col items-center justify-center w-full max-w-md h-[300px] bg-base-200 rounded-lg border-2 border-dashed border-base-300 hidden">
+                            <i class="ph ph-video text-6xl text-base-content/50 mb-4"></i>
+                            <p class="text-lg font-medium text-base-content/70">Video File</p>
+                            <p id="videoFileName" class="text-sm text-base-content/50 mt-2"></p>
+                        </div>
                         <div class="w-full max-w-md">
                             <div id="uploadProgress" class="htmx-indicator">
                                 <div class="flex items-center gap-2">
@@ -165,8 +170,15 @@
                                 <div class="flex items-center gap-4 p-0">
                                     <!-- Thumbnail -->
                                     <div class="w-16 h-16 flex-shrink-0 cursor-pointer" @click="showPreview(image)">
+                                        <!-- Image thumbnail -->
                                         <img :src="'/' + image.id" :alt="'Image ' + image.id"
-                                            class="w-full h-full object-cover rounded-lg" loading="lazy" />
+                                            class="w-full h-full object-cover rounded-lg" loading="lazy"
+                                            x-show="(!image.mimeType || image.mimeType.startsWith('image/')) && !['.mov', '.mp4', '.avi', '.webm', '.mkv', '.flv', '.wmv', '.m4v'].some(ext => image.id.toLowerCase().endsWith(ext))" />
+                                        <!-- Video thumbnail -->
+                                        <div class="w-full h-full bg-base-200 rounded-lg flex items-center justify-center"
+                                            x-show="(image.mimeType && image.mimeType.startsWith('video/')) || ['.mov', '.mp4', '.avi', '.webm', '.mkv', '.flv', '.wmv', '.m4v'].some(ext => image.id.toLowerCase().endsWith(ext))">
+                                            <i class="ph ph-video text-2xl text-base-content/50"></i>
+                                        </div>
                                     </div>
                                     <!-- Image Info -->
                                     <div class="flex-grow min-w-0 cursor-pointer" @click="showPreview(image)">
@@ -215,12 +227,13 @@
     </dialog>
 
     <!-- Preview Modal -->
-    <div x-data="{ 
+    <div x-data="{
         showPreview: false,
         previewImage: null,
         previewId: null,
         previewSize: null,
-        previewDate: null
+        previewDate: null,
+        previewMimeType: null
     }" x-show="showPreview" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center"
         @keydown.escape.window="showPreview = false" id="previewModal">
@@ -234,9 +247,18 @@
             x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95">
 
-            <!-- Image Preview -->
+            <!-- Image/Video Preview -->
             <div class="relative aspect-video bg-base-300">
-                <img :src="previewImage" :alt="'Image ' + previewId" class="w-full h-full object-contain" />
+                <!-- Image Preview -->
+                <img :src="previewImage" :alt="'Image ' + previewId" class="w-full h-full object-contain"
+                     x-show="(!previewMimeType || previewMimeType.startsWith('image/')) && (!previewId || !['.mov', '.mp4', '.avi', '.webm', '.mkv', '.flv', '.wmv', '.m4v'].some(ext => previewId.toLowerCase().endsWith(ext)))" />
+                <!-- Video Preview -->
+                <div class="w-full h-full flex flex-col items-center justify-center"
+                     x-show="(previewMimeType && previewMimeType.startsWith('video/')) || (previewId && ['.mov', '.mp4', '.avi', '.webm', '.mkv', '.flv', '.wmv', '.m4v'].some(ext => previewId.toLowerCase().endsWith(ext)))">
+                    <i class="ph ph-video text-8xl text-base-content/30 mb-4"></i>
+                    <p class="text-xl font-medium text-base-content/70">Video File</p>
+                    <p class="text-sm text-base-content/50 mt-2" x-text="previewId ? '/' + previewId : ''"></p>
+                </div>
             </div>
 
             <!-- Image Info -->
@@ -357,7 +379,8 @@
                         this.images = data.images.map(item => ({
                             id: item.id,
                             size: item.size,
-                            uploadedAt: item.uploadedAt
+                            uploadedAt: item.uploadedAt,
+                            mimeType: item.mimeType
                         }));
 
                         // Pre-fetch all images after list loads
@@ -370,6 +393,11 @@
                 },
 
                 showPreview(image) {
+                    // Check if this might be a video file
+                    const isVideoByExtension = ['.mov', '.mp4', '.avi', '.webm', '.mkv', '.flv', '.wmv', '.m4v'].some(ext =>
+                        image.id && image.id.toLowerCase().endsWith(ext)
+                    );
+
                     // Get the preview modal component using the ID
                     const preview = document.getElementById('previewModal');
                     const previewData = Alpine.$data(preview);
@@ -379,6 +407,7 @@
                     previewData.previewId = image.id;
                     previewData.previewSize = image.size;
                     previewData.previewDate = image.uploadedAt;
+                    previewData.previewMimeType = image.mimeType;
                     previewData.showPreview = true;
                 },
 
@@ -401,10 +430,10 @@
             input.addEventListener('change', function (e) {
                 const file = e.target.files[0];
                 if (file) {
-                    // Validate file size (10MB limit)
-                    if (file.size > 10 * 1024 * 1024) {
+                    // Validate file size (25MB limit)
+                    if (file.size > 25 * 1024 * 1024) {
                         Toastify({
-                            text: "File size exceeds 10MB limit",
+                            text: "File size exceeds 25MB limit",
                             duration: 3000,
                             gravity: "top",
                             position: "right",
@@ -415,13 +444,38 @@
                         return;
                     }
 
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        const preview = document.getElementById('previewImage');
-                        preview.src = e.target.result;
+                    // Check if it's a video file
+                    if (file.type.startsWith('video/')) {
+                        // Show video preview
+                        const previewVideo = document.getElementById('previewVideo');
+                        const videoFileName = document.getElementById('videoFileName');
+                        const previewImage = document.getElementById('previewImage');
+
+                        // Hide image preview, show video preview
+                        previewImage.classList.add('hidden');
+                        previewVideo.classList.remove('hidden');
+
+                        // Set video file name
+                        videoFileName.textContent = file.name;
+
+                        // Show preview container
                         document.getElementById('previewContainer').classList.remove('hidden');
-                    };
-                    reader.readAsDataURL(file);
+                    } else {
+                        // Show image preview
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            const previewImage = document.getElementById('previewImage');
+                            const previewVideo = document.getElementById('previewVideo');
+
+                            // Hide video preview, show image preview
+                            previewVideo.classList.add('hidden');
+                            previewImage.classList.remove('hidden');
+
+                            previewImage.src = e.target.result;
+                            document.getElementById('previewContainer').classList.remove('hidden');
+                        };
+                        reader.readAsDataURL(file);
+                    }
                 }
             });
         });
@@ -461,7 +515,8 @@
                             alpineData.images = data.images.map(item => ({
                                 id: item.id,
                                 size: item.size,
-                                uploadedAt: item.uploadedAt
+                                uploadedAt: item.uploadedAt,
+                                mimeType: item.mimeType
                             }));
                             alpineData.loading = false;
                         })
@@ -548,7 +603,8 @@
                             alpineData.images = data.images.map(item => ({
                                 id: item.id,
                                 size: item.size,
-                                uploadedAt: item.uploadedAt
+                                uploadedAt: item.uploadedAt,
+                                mimeType: item.mimeType
                             }));
                             alpineData.loading = false;
                         })
