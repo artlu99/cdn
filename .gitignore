@@ -1,35 +1,5 @@
-# Logs
-
-logs
-_.log
-npm-debug.log_
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
-# Dependency directories
-
 node_modules/
-jspm_packages/
 bun.lock
-
-# TypeScript cache
-
-\*.tsbuildinfo
-
-# Optional npm cache directory
-
-.npm
-
-# Optional eslint cache
-
-.eslintcache
-
-# Optional stylelint cache
-
-.stylelintcache
-
-# dotenv environment variable files
 
 .env
 .env.development.local
@@ -37,9 +7,10 @@ bun.lock
 .env.production.local
 .env.local
 
-# wrangler project
-
 .dev.vars
 .wrangler/
 
+.vscode/
+
 TODO.md
+AGENTS.md
