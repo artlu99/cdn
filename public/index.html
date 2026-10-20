@@ -190,9 +190,9 @@
                                     </div>
                                     <!-- Actions -->
                                     <div class="flex-shrink-0 flex gap-2">
-                                        <button class="btn btn-ghost btn-sm"
-                                            @click.stop="$store.utils.copyToClipboard('https://cdn.artlu.xyz/' + image.id)">
-                                            <i class="ph ph-copy"></i>
+                                        <button class="btn btn-ghost btn-sm" title="Share"
+                                            @click.stop="$store.utils.copyToClipboard(window.location.origin + '/p/' + image.id)">
+                                            <i class="ph ph-share-fat"></i>
                                         </button>
                                         <button class="btn btn-ghost btn-sm text-error/70"
                                             @click.stop="$store.utils.deleteImage(image.id)">
@@ -270,9 +270,9 @@
                         <div class="text-xs opacity-50" x-text="new Date(previewDate).toLocaleString()"></div>
                     </div>
                     <div class="flex gap-2">
-                        <button class="btn btn-ghost btn-sm"
-                            @click="$store.utils.copyToClipboard('https://cdn.artlu.xyz/' + previewId)">
-                            <i class="ph ph-copy"></i>
+                        <button class="btn btn-ghost btn-sm" title="Share"
+                            @click="$store.utils.copyToClipboard(window.location.origin + '/p/' + previewId)">
+                            <i class="ph ph-share-fat"></i>
                         </button>
                         <button class="btn btn-ghost btn-sm text-error/70" @click="$store.utils.deleteImage(previewId)">
                             <i class="ph ph-trash"></i>
@@ -304,7 +304,7 @@
                 copyToClipboard(text) {
                     navigator.clipboard.writeText(text).then(() => {
                         Toastify({
-                            text: "URL copied to clipboard",
+                            text: "Share link copied",
                             duration: 2000,
                             gravity: "top",
                             position: "right",
@@ -313,7 +313,7 @@
                     }).catch(err => {
                         console.error('Failed to copy:', err);
                         Toastify({
-                            text: "Failed to copy URL",
+                            text: "Failed to copy share link",
                             duration: 2000,
                             gravity: "top",
                             position: "right",
